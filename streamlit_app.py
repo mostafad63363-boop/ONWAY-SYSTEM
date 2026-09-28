@@ -1,5 +1,6 @@
 import streamlit as st
 import sqlite3
+import base64
 import pandas as pd
 import json
 import math
@@ -28,24 +29,26 @@ st.set_page_config(
 
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap');
-:root{--onway:#d62828;--onway-dark:#8f1717;--ink:#17202a;--muted:#6b7280;--soft:#f6f7f9;--green:#1f9d55;--amber:#c98400;--blue:#2563eb}
-html,body,[class*="css"]{font-family:'Cairo',sans-serif!important}
-[data-testid="stAppViewContainer"]{background:#f5f7fa}
-[data-testid="stHeader"]{background:rgba(255,255,255,.86)}
-.block-container{padding-top:1rem;padding-bottom:5rem;max-width:1450px}
-.onway-hero{background:linear-gradient(135deg,#111827 0%,#1f2937 60%,#7f1d1d 100%);color:#fff;border-radius:22px;padding:1.4rem 1.6rem;margin-bottom:1rem;box-shadow:0 12px 28px rgba(0,0,0,.10)}
-.onway-hero h1{margin:0;font-size:2rem;font-weight:800}.onway-hero p{margin:.3rem 0 0;color:#d1d5db}
-.card{background:#fff;border:1px solid #e5e7eb;border-radius:18px;padding:1rem 1.1rem;box-shadow:0 6px 18px rgba(17,24,39,.05)}
-.metric{background:#fff;border:1px solid #e5e7eb;border-radius:18px;padding:1rem}.metric .v{font-size:1.7rem;font-weight:800}.metric .l{color:#6b7280;font-size:.88rem}
-.status-pill{display:inline-block;padding:.18rem .55rem;border-radius:999px;font-size:.75rem;font-weight:700}
-.status-new{background:#fff7ed;color:#c2410c}.status-active{background:#eff6ff;color:#1d4ed8}.status-done{background:#ecfdf5;color:#047857}.status-cancel{background:#fef2f2;color:#b91c1c}.status-warn{background:#fffbeb;color:#a16207}
-.small{font-size:.8rem;color:#6b7280}.danger{color:#b91c1c}.ok{color:#047857}.warn{color:#a16207}
-.stButton>button{border-radius:12px;font-weight:800;min-height:44px}.stTextInput input,.stNumberInput input,.stSelectbox div[data-baseweb="select"]>div,.stDateInput input{border-radius:12px!important}
-[data-testid="stSidebar"]{background:#111827}.sidebar-title{color:#fff;font-size:1.35rem;font-weight:800;text-align:center;margin-bottom:1rem}.sidebar-sub{color:#cbd5e1;font-size:.78rem;text-align:center;margin-bottom:1rem}
-.table-wrap{overflow-x:auto;border-radius:14px;border:1px solid #e5e7eb}
-.mobile-note{display:none}
-@media(max-width:760px){.block-container{padding:.7rem .7rem 4.5rem}.onway-hero{padding:1rem}.onway-hero h1{font-size:1.5rem}.mobile-note{display:block;background:#fff7ed;border:1px solid #fed7aa;padding:.7rem;border-radius:12px;font-size:.78rem;color:#9a3412;margin-bottom:.7rem}}
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@500;600;700;800;900&display=swap');
+:root{--on:#c62828;--on2:#8e1717;--ink:#111827;--muted:#6b7280;--line:#e5e7eb;--soft:#f5f6f8;--good:#15803d;--warn:#a16207;--blue:#1d4ed8;--white:#fff;--shadow:0 8px 24px rgba(17,24,39,.06)}
+html,body,[class*=\"css\"]{font-family:'Cairo',sans-serif!important}
+[data-testid=\"stAppViewContainer\"]{background:var(--soft)}
+[data-testid=\"stHeader\"]{background:rgba(245,246,248,.88)}
+[data-testid=\"stSidebar\"]{background:linear-gradient(180deg,#0f172a 0%,#182231 100%)}
+[data-testid=\"stSidebar\"] *{color:#fff!important}
+[data-testid=\"stDecoration\"],#MainMenu,footer{display:none}
+.block-container{max-width:1500px;padding:.55rem .8rem 5rem}
+.onway-hero{background:linear-gradient(135deg,#0f172a 0%,#1f2937 57%,#7f1d1d 100%);color:#fff;border-radius:22px;padding:15px 18px;margin-bottom:10px;box-shadow:0 14px 34px rgba(0,0,0,.09)}
+.onway-hero h1{margin:0;font-size:1.52rem;font-weight:900;line-height:1.2}.onway-hero p{margin:.25rem 0 0;color:#d1d5db;font-size:.8rem}
+.metric{background:#fff;border:1px solid var(--line);border-radius:17px;padding:12px;min-height:84px;box-shadow:0 6px 18px rgba(17,24,39,.04)}.metric .v{font-size:1.42rem;font-weight:900;line-height:1.05;color:var(--ink)}.metric .l{font-size:.76rem;color:var(--muted);margin-top:5px}.metric .small{font-size:.66rem;color:var(--muted);margin-top:2px}
+.status-pill,.status-active,.status-done,.status-cancel,.status-warn{display:inline-block;padding:.18rem .55rem;border-radius:999px;font-size:.72rem;font-weight:800}.status-pill{background:#f3f4f6;color:#374151}.status-active{background:#eff6ff;color:#1d4ed8}.status-done{background:#ecfdf5;color:#047857}.status-cancel{background:#fef2f2;color:#b91c1c}.status-warn{background:#fffbeb;color:#a16207}
+.section-title{font-size:1.02rem;font-weight:900;color:var(--ink);margin:.38rem 0 .42rem}.section-sub{font-size:.74rem;color:var(--muted);margin-bottom:.55rem}.small-note{font-size:.68rem;color:var(--muted)}
+.card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:12px 13px;box-shadow:var(--shadow)}
+.alert{border-radius:13px;padding:9px 11px;font-size:.78rem;font-weight:700;margin:7px 0}.alert-green{background:#ecfdf5;color:#166534}.alert-amber{background:#fffbeb;color:#92400e}.alert-red{background:#fef2f2;color:#991b1b}.alert-blue{background:#eff6ff;color:#1e40af}
+.stButton>button,.stDownloadButton>button,.stLinkButton>a{min-height:46px;border-radius:12px!important;font-weight:800!important}.stTextInput input,.stNumberInput input,.stTextArea textarea,.stDateInput input,[data-baseweb=\"select\"]>div{min-height:44px;border-radius:12px!important}
+[data-testid=\"stExpander\"]{border:1px solid var(--line);border-radius:15px;background:#fff}.stDataFrame{border-radius:14px;overflow:hidden}
+.sidebar-title{color:#fff;font-size:1.25rem;font-weight:900;text-align:center;margin:12px 0 3px}.sidebar-sub{color:#cbd5e1;font-size:.72rem;text-align:center;margin-bottom:10px}
+@media(max-width:700px){.block-container{padding:.4rem .5rem 5rem}.onway-hero{padding:12px 13px;border-radius:17px}.onway-hero h1{font-size:1.28rem}.onway-hero p{font-size:.72rem}.metric{min-height:78px;padding:10px}.metric .v{font-size:1.2rem}.section-title{font-size:.98rem}.stButton>button,.stDownloadButton>button,.stLinkButton>a{min-height:54px;font-size:1rem!important}.stTextInput input,.stNumberInput input,.stTextArea textarea,[data-baseweb=\"select\"]>div{min-height:50px;font-size:16px!important}.stDataFrame{font-size:.72rem}}
 </style>
 """, unsafe_allow_html=True)
 
@@ -521,477 +524,611 @@ def dashboard_data():
     return {"total":total,"cash_orders":cash,"credit_orders":credit,"completed":completed,"commission":commission,
             "rewards":rewards,"discount":discount,"restaurant_due":restaurant_due,"treasury":treasury,"gps_stale":gps_stale}
 
+
 # =========================================================
-# واجهة إدارة العملية
+# أدوات V3 المساندة — لا تغيّر Schema أو معادلات الحساب
 # =========================================================
-def header(title, subtitle=""):
+def gps_fresh(rider):
+    raw = rider.get('last_gps_at') if isinstance(rider, dict) else None
+    if not raw:
+        return False
+    try:
+        age = (datetime.now() - datetime.strptime(raw, '%Y-%m-%d %H:%M:%S')).total_seconds()
+        return age <= float(get_setting('gps_fresh_seconds', 30))
+    except Exception:
+        return False
+
+
+def active_restaurants():
+    return get_restaurants(True)
+
+
+def all_restaurants():
+    return get_restaurants(False)
+
+
+def branches_for(restaurant_id, active_only=True):
+    return get_branches(restaurant_id, active_only)
+
+
+def order_with_names(order_no):
+    return one(
+        "SELECT o.*,r.name restaurant,b.name branch,COALESCE(ry.name,'—') rider "
+        "FROM orders o JOIN restaurants r ON r.id=o.restaurant_id "
+        "JOIN branches b ON b.id=o.branch_id LEFT JOIN riders ry ON ry.id=o.rider_id "
+        "WHERE o.order_no=?", (order_no,)
+    )
+
+
+def notify_v3(kind, message):
+    if kind == 'green':
+        st.success(message)
+    elif kind == 'red':
+        st.error(message)
+    elif kind == 'amber':
+        st.warning(message)
+    else:
+        st.info(message)
+
+
+def metric_v3(items):
+    cols = st.columns(min(6, len(items)))
+    for i, item in enumerate(items):
+        label, value, accent = item
+        with cols[i % len(cols)]:
+            st.markdown(
+                f'<div class="metric"><div class="v">{value}</div><div class="l">{label}</div>'
+                f'<div class="small">{accent}</div></div>', unsafe_allow_html=True
+            )
+
+
+def badge_v3(text, kind='soft'):
+    classes = {'green':'status-done','red':'status-cancel','blue':'status-active','amber':'status-warn','soft':'status-pill'}
+    return f'<span class="{classes.get(kind, "status-pill")}">{text}</span>'
+
+
+def header_v3(title, subtitle=''):
     st.markdown(f'<div class="onway-hero"><h1>{title}</h1><p>{subtitle}</p></div>', unsafe_allow_html=True)
 
 
-def show_metrics(items):
-    cols = st.columns(len(items))
-    for col, (label, value) in zip(cols, items):
-        with col:
-            st.markdown(f'<div class="metric"><div class="v">{value}</div><div class="l">{label}</div></div>', unsafe_allow_html=True)
-
-
-def render_dashboard(user):
-    header("لوحة القيادة", "صورة تشغيلية سريعة للقرار، بدون تفاصيل زائدة.")
-    if user["role"] == "RESTAURANT" and user.get("ref_id"):
-        d_orders = df("SELECT * FROM orders WHERE restaurant_id=?", (user["ref_id"],))
-        total=len(d_orders); cash=int((d_orders["billing_mode"]=="كاش").sum()) if not d_orders.empty else 0; credit=int((d_orders["billing_mode"]=="آجل").sum()) if not d_orders.empty else 0
-        completed=int((d_orders["status"]=="تم التسليم").sum()) if not d_orders.empty else 0
-        commission=float(d_orders["rider_commission"].sum()) if not d_orders.empty else 0
-        due=float(d_orders.loc[d_orders["billing_mode"]=="آجل","delivery_fee"].sum()) if not d_orders.empty else 0
-        st.write("")
-        show_metrics([("إجمالي الطلبات",total),("كاش / آجل",f"{cash} / {credit}"),("تم التسليم",completed),("خدمات التوصيل الآجلة",f"{due:,.2f} ج"),("عمولات التشغيل",f"{commission:,.2f} ج")])
-        st.subheader("آخر طلبات المطعم")
-        st.dataframe(d_orders[["order_no","status","billing_mode","delivery_address","delivery_fee","created_at"]].sort_values("created_at",ascending=False).head(80),use_container_width=True,hide_index=True)
-        return
-    d = dashboard_data()
-    show_metrics([
-        ("طلبات اليوم", d["total"]),
-        ("كاش / آجل", f'{d["cash_orders"]} / {d["credit_orders"]}'),
-        ("تم التسليم", d["completed"]),
-        ("عمولات الطيارين", f'{d["commission"]:,.2f} ج'),
-        ("مديونية المطاعم", f'{d["restaurant_due"]:,.2f} ج'),
-        ("الخزينة", f'{d["treasury"]:,.2f} ج'),
-    ])
-    st.write("")
-    if d["gps_stale"]:
-        st.warning(f'هناك {d["gps_stale"]} طيارين آخر تحديث GPS لهم قديم.')
-    st.subheader("حركة الطلبات اليوم")
-    o = df("""SELECT order_no as 'الطلب', status as 'الحالة', billing_mode as 'التحصيل', delivery_fee as 'الخدمة',
-              rider_commission as 'العمولة', created_at as 'الوقت' FROM orders WHERE substr(created_at,1,10)=? ORDER BY created_at DESC LIMIT 80""", (today_str(),))
-    if o.empty: st.info("لا توجد طلبات اليوم.")
-    else: st.dataframe(o, use_container_width=True, hide_index=True)
-
-
-def render_orders(user):
-    header("الطلبات", "ابحث، أنشئ، عيّن، تابع، وعدّل الطلب من شاشة واحدة.")
-    q1,q2,q3 = st.columns(3)
-    search = q1.text_input("بحث برقم الطلب / العنوان")
-    status_filter = q2.selectbox("الحالة", ["الكل","جديد","تم التعيين","تم القبول","تم الاستلام","في الطريق","تم التسليم","ملغى"])
-    billing_filter = q3.selectbox("التحصيل", ["الكل","كاش","آجل"])
-    query = "SELECT * FROM orders WHERE 1=1"
-    params = []
-    if user["role"] == "RESTAURANT" and user.get("ref_id"):
-        query += " AND restaurant_id=?"; params.append(user["ref_id"])
-    if search:
-        query += " AND (order_no LIKE ? OR delivery_address LIKE ?)"; params += [f"%{search}%",f"%{search}%"]
-    if status_filter != "الكل": query += " AND status=?"; params.append(status_filter)
-    if billing_filter != "الكل": query += " AND billing_mode=?"; params.append(billing_filter)
-    query += " ORDER BY created_at DESC LIMIT 300"
-    orders = df(query, tuple(params))
-    st.dataframe(orders[["order_no","status","billing_mode","delivery_address","distance_km","delivery_fee","rider_commission","created_at"]] if not orders.empty else orders,
-                 use_container_width=True, hide_index=True)
-
-    if user["role"] in ("OWNER","DISPATCHER","ACCOUNTANT"):
-        with st.expander("＋ إنشاء طلب جديد", expanded=False):
-            restaurants = get_restaurants()
-            if restaurants.empty:
-                st.warning("أضف مطعماً أولاً من شاشة المطاعم.")
+def set_active(entity, entity_id, active, actor):
+    table_map = {'rider':'riders', 'restaurant':'restaurants', 'branch':'branches', 'user':'users'}
+    table = table_map.get(entity)
+    if not table:
+        raise ValueError('نوع السجل غير معروف.')
+    old = one(f'SELECT * FROM {table} WHERE id=?', (entity_id,))
+    if not old:
+        raise ValueError('السجل غير موجود.')
+    with conn() as c:
+        if entity == 'rider':
+            if active:
+                c.execute("UPDATE riders SET status=CASE WHEN status='غير نشط' THEN 'متاح' ELSE status END WHERE id=?", (entity_id,))
             else:
-                rmap = dict(zip(restaurants["name"], restaurants["id"]))
-                restaurant_name = st.selectbox("المطعم", list(rmap))
-                rid = rmap[restaurant_name]
-                branches = get_branches(rid)
-                if branches.empty:
-                    st.warning("أضف فرعاً للمطعم أولاً.")
+                if int(old.get('active_orders') or 0) > 0:
+                    raise ValueError('لا يمكن تعطيل طيار لديه طلبات نشطة.')
+                c.execute("UPDATE riders SET status='غير نشط' WHERE id=?", (entity_id,))
+        else:
+            c.execute(f'UPDATE {table} SET active=? WHERE id=?', (1 if active else 0, entity_id))
+    new = one(f'SELECT * FROM {table} WHERE id=?', (entity_id,))
+    audit(actor['id'], 'activate' if active else 'deactivate', entity, entity_id, before=old, after=new)
+
+
+def reset_user_pin(user_id, actor):
+    u = one('SELECT * FROM users WHERE id=?', (user_id,))
+    if not u:
+        raise ValueError('المستخدم غير موجود.')
+    pin = ''.join(secrets.choice('0123456789') for _ in range(6))
+    with conn() as c:
+        c.execute('UPDATE users SET pin_hash=? WHERE id=?', (hash_pin(pin), user_id))
+    audit(actor['id'], 'reset_pin', 'user', user_id, after={'pin_reset': True})
+    return pin
+
+
+def create_user(data, actor):
+    email = data['email'].strip().lower()
+    pin = data['pin'].strip()
+    if not data['name'].strip() or '@' not in email or len(pin) < 4 or not pin.isdigit():
+        raise ValueError('الاسم والبريد وPIN صحيح مطلوبة.')
+    uidv = uid('USR')
+    with conn() as c:
+        c.execute(
+            'INSERT INTO users(id,name,email,role,ref_id,pin_hash,active,created_at) VALUES (?,?,?,?,?,?,1,?)',
+            (uidv, data['name'].strip(), email, data['role'], data.get('ref_id'), hash_pin(pin), now_iso())
+        )
+    audit(actor['id'], 'create', 'user', uidv, after={k:v for k,v in data.items() if k != 'pin'} | {'id': uidv})
+    return uidv
+
+
+def create_restaurant(data, actor):
+    if not data['name'].strip():
+        raise ValueError('اسم المطعم مطلوب.')
+    rid = uid('RST')
+    with conn() as c:
+        c.execute(
+            'INSERT INTO restaurants(id,name,phone,billing_mode,active,created_at) VALUES (?,?,?,?,1,?)',
+            (rid, data['name'].strip(), data.get('phone','').strip(), data['billing_mode'], now_iso())
+        )
+    audit(actor['id'], 'create', 'restaurant', rid, after=data | {'id': rid})
+    return rid
+
+
+def create_branch(data, actor):
+    if not data['name'].strip():
+        raise ValueError('اسم الفرع مطلوب.')
+    if data.get('lat') is None or data.get('lng') is None:
+        raise ValueError('اختَر موقع الفرع على الخريطة أولاً.')
+    bid = uid('BRN')
+    with conn() as c:
+        c.execute(
+            'INSERT INTO branches(id,restaurant_id,name,address,lat,lng,active,created_at) VALUES (?,?,?,?,?,?,1,?)',
+            (bid, data['restaurant_id'], data['name'].strip(), data.get('address','').strip(), float(data['lat']), float(data['lng']), now_iso())
+        )
+    audit(actor['id'], 'create', 'branch', bid, after=data | {'id': bid})
+    return bid
+
+
+def create_rider(data, actor):
+    if not data['name'].strip():
+        raise ValueError('اسم الطيار مطلوب.')
+    rid = uid('RYD')
+    with conn() as c:
+        c.execute(
+            'INSERT INTO riders(id,name,phone,salary,status,created_at) VALUES (?,?,?,?,?,?)',
+            (rid, data['name'].strip(), data.get('phone','').strip(), float(data.get('salary') or get_setting('salary_basic',6000)), 'متاح', now_iso())
+        )
+    audit(actor['id'], 'create', 'rider', rid, after=data | {'id': rid})
+    return rid
+
+
+def record_gps(rider_id, payload):
+    lat = float(payload['lat']); lng = float(payload['lng'])
+    if not (-90 <= lat <= 90 and -180 <= lng <= 180):
+        return False
+    stamp = now_iso()
+    with conn() as c:
+        c.execute(
+            'UPDATE riders SET last_lat=?,last_lng=?,gps_accuracy=?,heading=?,speed=?,last_gps_at=? WHERE id=?',
+            (lat, lng, payload.get('accuracy'), payload.get('heading'), payload.get('speed'), stamp, rider_id)
+        )
+        c.execute(
+            'INSERT INTO gps_log(rider_id,lat,lng,accuracy,heading,speed,recorded_at) VALUES (?,?,?,?,?,?,?)',
+            (rider_id, lat, lng, payload.get('accuracy'), payload.get('heading'), payload.get('speed'), stamp)
+        )
+    return True
+# =========================================================
+# ONWAY UI V3 — غرفة عمليات مرئية + خريطة + إدارة حالات
+# هذا القسم يستبدل طبقة العرض فقط؛ لا يغير SCHEMA أو الحسابات الأساسية.
+# =========================================================
+
+# خريطة Leaflet تفاعلية: اختيار نقطة + علامات + مسار + GPS
+MAP_COMPONENT_V3 = None
+try:
+    from streamlit.components.v2 import component as _onway_component
+
+    MAP_HTML_V3 = '''
+    <div id="ow-root" style="height:100%;min-height:430px;position:relative;border-radius:18px;overflow:hidden;background:#dde5ec">
+      <div id="ow-map" style="position:absolute;inset:0"></div>
+      <div id="ow-msg" style="display:none;position:absolute;top:12px;right:12px;z-index:1200;background:rgba(17,24,39,.93);color:#fff;border-radius:999px;padding:7px 11px;font:700 12px Cairo,Arial"></div>
+    </div>
+    '''
+    MAP_CSS_V3 = '''
+      @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800;900&display=swap');
+      .leaflet-container{background:#dfe6ec}.leaflet-popup-content{direction:rtl;font-family:Cairo,Arial;font-size:12px;line-height:1.65}
+      .leaflet-control{font-family:Cairo,Arial}.ow-pin{display:flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;border:2px solid #fff;box-shadow:0 3px 12px rgba(0,0,0,.3);font-size:18px}
+    '''
+    MAP_JS_V3 = '''
+    export default function(component){
+      const {data,setTriggerValue,setStateValue,parentElement}=component;
+      const mapEl=parentElement.querySelector('#ow-map'); const msg=parentElement.querySelector('#ow-msg');
+      if(!mapEl) return;
+      let cfg={}; try{ cfg=JSON.parse(atob(data)); }catch(e){ return; }
+      const load=src=>new Promise((resolve,reject)=>{ if(window.L){resolve();return;} const s=document.createElement('script');s.src=src;s.onload=resolve;s.onerror=reject;document.head.appendChild(s); });
+      const safeText=(v)=>String(v??'').replace(/[<>&"']/g, ch=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'}[ch]));
+      (async()=>{
+        try{ await load('https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'); }catch(e){ msg.style.display='block';msg.textContent='تعذر تحميل الخريطة';return; }
+        if(mapEl.__owMap){ try{mapEl.__owMap.remove();}catch(e){} mapEl.__owMap=null; }
+        mapEl.innerHTML='';
+        const center=cfg.center||[31.2001,29.9187];
+        const map=L.map(mapEl,{zoomControl:false,preferCanvas:true}).setView(center,cfg.zoom||12);
+        mapEl.__owMap=map;
+        L.control.zoom({position:'bottomleft'}).addTo(map);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap contributors'}).addTo(map);
+        const bounds=[];
+        const marker=(p)=>{
+          if(p.lat==null||p.lng==null) return;
+          const colors={rider:p.online?'#16a34a':'#6b7280',order:'#dc2626',branch:'#c62828',self:'#2563eb'};
+          const color=colors[p.kind]||'#c62828';
+          const icon=L.divIcon({className:'',html:`<div class="ow-pin" style="background:${color}">${safeText(p.icon||'📍')}</div>`,iconSize:[34,34],iconAnchor:[17,17]});
+          const m=L.marker([p.lat,p.lng],{icon}).addTo(map);
+          let body=`<b>${safeText(p.title||'')}</b>`; if(p.meta) body+=`<br>${safeText(p.meta)}`;
+          if(p.kind==='rider' && p.accuracy!=null) body+=`<br>دقة GPS: ${safeText(p.accuracy)} م`;
+          m.bindPopup(body); m.on('click',()=>setTriggerValue('marker_click',JSON.stringify({id:p.id,kind:p.kind})));
+          bounds.push([p.lat,p.lng]);
+        };
+        (cfg.points||[]).forEach(marker);
+        if(cfg.route && cfg.route.from && cfg.route.to){
+          const f=cfg.route.from,t=cfg.route.to;
+          const url=`https://router.project-osrm.org/route/v1/driving/${f[1]},${f[0]};${t[1]},${t[0]}?overview=full&geometries=geojson`;
+          fetch(url).then(r=>r.json()).then(d=>{
+            if(d.routes&&d.routes[0]){
+              const route=d.routes[0],coords=route.geometry.coordinates.map(x=>[x[1],x[0]]);
+              L.polyline(coords,{color:'#c62828',weight:6,opacity:.9,lineCap:'round'}).addTo(map);
+              setStateValue('route_meta',JSON.stringify({distance_m:route.distance,duration_s:route.duration}));
+              map.fitBounds(coords,{padding:[35,35]});
+            }
+          }).catch(()=>{});
+        } else if(bounds.length){ map.fitBounds(bounds,{padding:[35,35],maxZoom:15}); }
+        if(cfg.clickable){
+          map.on('click',(e)=>{
+            const lat=Number(e.latlng.lat.toFixed(6)),lng=Number(e.latlng.lng.toFixed(6));
+            msg.style.display='block';msg.textContent='جاري تحديد العنوان…';
+            fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=18&accept-language=ar`)
+              .then(r=>r.json()).then(d=>{msg.style.display='none';const address=d.display_name||'موقع محدد';L.marker([lat,lng]).addTo(map).bindPopup(`<b>📍 الموقع المختار</b><br>${safeText(address)}`).openPopup();setTriggerValue('map_click',JSON.stringify({lat,lng,address}));})
+              .catch(()=>{msg.style.display='none';setTriggerValue('map_click',JSON.stringify({lat,lng,address:''}));});
+          });
+        }
+        if(cfg.geolocation && navigator.geolocation){
+          let last=0;
+          navigator.geolocation.watchPosition(pos=>{
+            const now=Date.now(); if(now-last<4000) return; last=now; const c=pos.coords;
+            setTriggerValue('gps',JSON.stringify({lat:Number(c.latitude.toFixed(6)),lng:Number(c.longitude.toFixed(6)),accuracy:c.accuracy==null?null:Number(c.accuracy.toFixed(1)),heading:c.heading==null?null:Number(c.heading.toFixed(1)),speed:c.speed==null?null:Number((c.speed||0).toFixed(1)),ts:now}));
+          },e=>{msg.style.display='block';msg.textContent='🔴 GPS: '+e.message;},{enableHighAccuracy:true,maximumAge:3000,timeout:10000});
+        }
+      })();
+      return ()=>{};
+    }
+    '''
+    MAP_COMPONENT_V3 = _onway_component('onway_operational_map_v3',html=MAP_HTML_V3,css=MAP_CSS_V3,js=MAP_JS_V3,isolate_styles=True)
+except Exception:
+    MAP_COMPONENT_V3=None
+
+
+def mount_map_v3(points=None, center=None, zoom=12, clickable=False, geolocation=False, route=None, key='mapv3'):
+    cfg={'points':points or [],'center':center or [31.2001,29.9187],'zoom':zoom,'clickable':clickable,'geolocation':geolocation,'route':route}
+    if MAP_COMPONENT_V3:
+        payload=base64.b64encode(json.dumps(cfg,ensure_ascii=False).encode('utf-8')).decode('ascii')
+        return MAP_COMPONENT_V3(key=key,data=payload)
+    pts=[{'lat':p['lat'],'lon':p['lng']} for p in (points or []) if p.get('lat') is not None and p.get('lng') is not None]
+    if pts: st.map(pd.DataFrame(pts),latitude='lat',longitude='lon',zoom=zoom,height=470)
+    else: st.info('الخريطة التفاعلية تحتاج إصدار Streamlit حديثاً.')
+    return None
+
+
+def header_v3(title, subtitle=''):
+    st.markdown(f'<div class="onway-hero"><h1>{title}</h1><p>{subtitle}</p></div>',unsafe_allow_html=True)
+
+
+def metric_v3(items):
+    cols=st.columns(min(6,len(items)))
+    for i,(label,value,accent) in enumerate(items):
+        with cols[i%len(cols)]:
+            st.markdown(f'<div class="metric"><div class="v">{value}</div><div class="l">{label}</div><div class="small">{accent}</div></div>',unsafe_allow_html=True)
+
+
+def badge_v3(text,kind='soft'):
+    classes={'green':'status-done','red':'status-cancel','blue':'status-active','amber':'status-warn','soft':'status-pill'}
+    return f'<span class="{classes.get(kind,"status-pill")}">{text}</span>'
+
+
+def render_live_map_v3(user, compact=False):
+    @st.fragment(run_every='5s')
+    def block():
+        riders=df("SELECT id,name,status,active_orders,last_lat,last_lng,gps_accuracy,last_gps_at FROM riders WHERE status!='غير نشط' AND last_lat IS NOT NULL AND last_lng IS NOT NULL")
+        orders=df("SELECT id,order_no,status,delivery_address,delivery_lat,delivery_lng,rider_id FROM orders WHERE status NOT IN ('تم التسليم','ملغى') AND delivery_lat IS NOT NULL AND delivery_lng IS NOT NULL")
+        if user['role']=='RIDER': orders=orders[orders['rider_id']==user['ref_id']]
+        selected_rider=None
+        if not compact and user['role']!='RIDER' and not riders.empty:
+            names={'الكل':None}; names.update(dict(zip(riders['name'],riders['id']))); sel=st.selectbox('متابعة طيار',list(names),key='live_filter_rider'); selected_rider=names[sel]
+        points=[]; route=None
+        for _,r in riders.iterrows():
+            if selected_rider and r['id']!=selected_rider: continue
+            fresh=gps_fresh(r.to_dict())
+            points.append({'id':r['id'],'kind':'rider','icon':'🚴','lat':r['last_lat'],'lng':r['last_lng'],'online':fresh,'accuracy':r['gps_accuracy'],'title':r['name'],'meta':f"{r['status']} • {int(r['active_orders'])} طلبات • آخر تحديث {r['last_gps_at'] or '—'}"})
+        for _,o in orders.iterrows():
+            if selected_rider and o['rider_id']!=selected_rider: continue
+            points.append({'id':o['id'],'kind':'order','icon':'📦','lat':o['delivery_lat'],'lng':o['delivery_lng'],'online':True,'title':o['order_no'],'meta':f"{o['status']} • {o['delivery_address']}"})
+            if selected_rider and not route:
+                r=riders[riders['id']==selected_rider]
+                if not r.empty and r.iloc[0]['last_lat'] is not None: route={'from':[r.iloc[0]['last_lat'],r.iloc[0]['last_lng']],'to':[o['delivery_lat'],o['delivery_lng']]}
+        if points:
+            result=mount_map_v3(points,center=[31.2001,29.9187],zoom=12,route=route,geolocation=False,key='owner_live_map_v3' if compact else 'owner_live_map_full_v3')
+            if result:
+                marker_click=getattr(result,'marker_click',None)
+                if marker_click:
+                    try: st.session_state.map_selected=json.loads(marker_click)
+                    except Exception: pass
+        else: st.info('لا يوجد GPS حي أو طلبات ذات موقع مسجل حتى الآن.')
+        if not riders.empty and not compact:
+            view=riders.copy(); view['الحالة الحالية']=[('🟢 GPS حديث' if gps_fresh(x.to_dict()) else '🟠 GPS قديم') for _,x in riders.iterrows()]
+            st.dataframe(view[['name','status','active_orders','gps_accuracy','last_gps_at','الحالة الحالية']].rename(columns={'name':'الطيار','status':'الحالة','active_orders':'طلبات نشطة','gps_accuracy':'دقة GPS','last_gps_at':'آخر تحديث'}),use_container_width=True,hide_index=True)
+    block()
+
+
+def render_dashboard_v3(user):
+    if user['role']=='RIDER':
+        return render_rider_v3(user)
+    if user['role']=='RESTAURANT':
+        rs=df("SELECT * FROM orders WHERE restaurant_id=? ORDER BY created_at DESC LIMIT 60",(user.get('ref_id'),))
+        header_v3('مرحباً بك','لوحة المطعم — الطلبات والحالة المالية بدون تفاصيل تشغيلية لا تحتاجها.')
+        metric_v3([('طلبات',len(rs),'إجمالي المعروض'),('قيد التنفيذ',int(rs['status'].isin(['جديد','تم التعيين','تم القبول','تم الاستلام','في الطريق']).sum()) if not rs.empty else 0,'نشطة'),('تم التسليم',int((rs['status']=='تم التسليم').sum()) if not rs.empty else 0,'مكتملة')])
+        st.dataframe(rs[['order_no','status','billing_mode','delivery_address','delivery_fee','created_at']].rename(columns={'order_no':'الطلب','status':'الحالة','billing_mode':'التحصيل','delivery_address':'العنوان','delivery_fee':'خدمة التوصيل','created_at':'الوقت'}),use_container_width=True,hide_index=True)
+        return
+    header_v3('غرفة العمليات','المعلومات المهمة أمامك أولاً: الطلبات، الأسطول، السيولة، والاستثناءات.')
+    d=dashboard_data()
+    metric_v3([('طلبات اليوم',d['total'],'كل الطلبات'),('كاش / آجل',f"{d['cash_orders']} / {d['credit_orders']}",'تحصيل'),('تم التسليم',d['completed'],'مغلقة'),('عمولات الطيارين',f"{d['commission']:,.2f} ج",'اليوم'),('مديونية آجل',f"{d['restaurant_due']:,.2f} ج",'تحتاج تحصيل'),('الخزينة',f"{d['treasury']:,.2f} ج",'الرصيد الدفتري')])
+    if user['role']=='OWNER':
+        st.markdown('<div class="section-title">🗺️ الخريطة الرئيسية</div>',unsafe_allow_html=True)
+        render_live_map_v3(user,compact=True)
+    o=df("SELECT o.order_no,r.name restaurant,b.name branch,o.status,o.billing_mode,COALESCE(ry.name,'—') rider,o.delivery_address,o.created_at FROM orders o JOIN restaurants r ON r.id=o.restaurant_id JOIN branches b ON b.id=o.branch_id LEFT JOIN riders ry ON ry.id=o.rider_id ORDER BY o.created_at DESC LIMIT 40")
+    if not o.empty:
+        st.markdown('<div class="section-title">آخر حركة</div>',unsafe_allow_html=True)
+        st.dataframe(o.rename(columns={'order_no':'الطلب','restaurant':'المطعم','branch':'الفرع','status':'الحالة','billing_mode':'التحصيل','rider':'الطيار','delivery_address':'العنوان','created_at':'الوقت'}),use_container_width=True,hide_index=True)
+
+
+def render_orders_v3(user):
+    header_v3('الطلبات','مركز التشغيل: الطلب من إنشائه حتى التسليم — بدون إدخال إحداثيات يدوياً.')
+    if user['role'] in ('OWNER','DISPATCHER'):
+        with st.expander('＋ إنشاء طلب',expanded=False):
+            rs=active_restaurants()
+            if rs.empty: st.warning('أضف مطعماً نشطاً أولاً.')
+            else:
+                rmap=dict(zip(rs['name'],rs['id'])); rn=st.selectbox('المطعم',list(rmap),key='newv3_rest'); rid=rmap[rn]
+                bs=branches_for(rid)
+                if bs.empty: st.warning('أضف فرعاً أولاً.')
                 else:
-                    bmap = dict(zip(branches["name"], branches["id"]))
-                    branch_name = st.selectbox("الفرع", list(bmap))
-                    br = branches[branches["id"]==bmap[branch_name]].iloc[0].to_dict()
-                    riders = ranked_riders(float(br["lat"] or 31.2001), float(br["lng"] or 29.9187))
-                    rider_options = {"تعيين لاحقاً": None}
-                    if not riders.empty: rider_options.update(dict(zip(riders["name"], riders["id"])))
-                    if not riders.empty:
-                        suggested=riders.iloc[0]
-                        st.info(f"🤖 اقتراح التعيين الذكي: {suggested['name']} — طلبات نشطة {int(suggested['active_orders'])}")
-                    with st.form("new_order"):
-                        a,b = st.columns(2)
-                        order_no = a.text_input("رقم الطلب")
-                        delivery_address = b.text_input("عنوان التسليم")
-                        c,d,e = st.columns(3)
-                        distance = c.number_input("المسافة (كم)", min_value=0.0, step=0.1, value=3.0)
-                        eta = d.number_input("الوقت المتوقع (دقيقة)", min_value=0, step=1, value=20)
-                        billing = e.selectbox("نظام التحصيل", ["كاش","آجل"])
-                        f,g = st.columns(2)
-                        fee = f.number_input("قيمة خدمة التوصيل", min_value=0.0, step=1.0, value=30.0)
-                        rider_name = g.selectbox("الطيار", list(rider_options.keys()))
-                        h,i = st.columns(2)
-                        lat = h.number_input("خط عرض العميل (اختياري)", value=float(br["lat"] or 31.2001), format="%.6f")
-                        lng = i.number_input("خط طول العميل (اختياري)", value=float(br["lng"] or 29.9187), format="%.6f")
-                        reward = st.number_input("مكافأة", min_value=0.0, step=1.0, value=0.0)
-                        discount = st.number_input("خصم", min_value=0.0, step=1.0, value=0.0)
-                        notes = st.text_area("ملاحظات")
-                        submit = st.form_submit_button("حفظ وإطلاق الطلب", use_container_width=True)
-                        if submit:
-                            if billing == "كاش" and fee <= 0: st.error("خدمة التوصيل للكاش يجب أن تكون أكبر من صفر.")
-                            elif not order_no or not delivery_address: st.error("رقم الطلب والعنوان مطلوبان.")
+                    bmap=dict(zip(bs['name'],bs['id'])); bn=st.selectbox('الفرع',list(bmap),key='newv3_branch'); br=bs[bs['id']==bmap[bn]].iloc[0].to_dict()
+                    st.markdown('<div class="section-sub">اختر عنوان العميل بالنقر على الخريطة. سيظهر العنوان تلقائياً، ولا تحتاج لكتابة خطوط الطول والعرض.</div>',unsafe_allow_html=True)
+                    if 'newv3_point' not in st.session_state: st.session_state.newv3_point={}
+                    point=st.session_state.newv3_point
+                    center=[br.get('lat') or 31.2001,br.get('lng') or 29.9187]
+                    route={'from':[br.get('lat') or 31.2001,br.get('lng') or 29.9187],'to':[point['lat'],point['lng']]} if point.get('lat') is not None else None
+                    res=mount_map_v3(points=[{'id':'branch','kind':'branch','icon':'🏪','lat':br.get('lat'),'lng':br.get('lng'),'online':True,'title':bn,'meta':br.get('address','')}],center=center,zoom=14,clickable=True,route=route,key='newv3_pick_map')
+                    click=getattr(res,'map_click',None) if res else None
+                    if click:
+                        try: st.session_state.newv3_point=json.loads(click); st.rerun()
+                        except Exception: pass
+                    point=st.session_state.newv3_point
+                    if point.get('lat') is not None:
+                        route_meta=getattr(res,'route_meta',None) if res else None
+                        if route_meta:
+                            try: st.session_state.newv3_distance=round(float(json.loads(route_meta)['distance_m'])/1000,2)
+                            except Exception: pass
+                        elif 'newv3_distance' not in st.session_state:
+                            st.session_state.newv3_distance=round(haversine_km(center[0],center[1],point['lat'],point['lng']),2)
+                        notify='تم اختيار موقع التسليم: ' + (point.get('address') or f"{point['lat']}, {point['lng']}")
+                        st.success(notify)
+                    with st.form('newv3_order_form'):
+                        a,b=st.columns(2); order_no=a.text_input('رقم الطلب'); address=b.text_input('عنوان التسليم',value=point.get('address',''))
+                        c,d,e=st.columns(3); distance=c.number_input('المسافة التشغيلية (كم)',min_value=0.0,value=float(st.session_state.get('newv3_distance',3.0)),step=.1); eta=d.number_input('الوقت المتوقع',min_value=0,value=20,step=1); billing=e.selectbox('التحصيل',['كاش','آجل'],index=0 if rs[rs['id']==rid].iloc[0]['billing_mode']=='كاش' else 1)
+                        f,g,h=st.columns(3); fee=f.number_input('خدمة التوصيل',min_value=0.0,value=30.0,step=1.0); reward=g.number_input('مكافأة',min_value=0.0,value=0.0,step=1.0); discount=h.number_input('خصم',min_value=0.0,value=0.0,step=1.0)
+                        rr=ranked_riders(br.get('lat'),br.get('lng')); opts={'تعيين لاحقاً':None};
+                        if not rr.empty: opts.update(dict(zip(rr['name'],rr['id'])))
+                        rider_name=st.selectbox('الطيار',list(opts),index=1 if len(opts)>1 else 0)
+                        comm=commission_for_distance(distance); st.markdown(f'<div class="card"><b>عمولة الطيار المحسوبة:</b> {comm:,.2f} ج</div>',unsafe_allow_html=True)
+                        notes=st.text_area('ملاحظات')
+                        if st.form_submit_button('🚀 حفظ وإطلاق الطلب',use_container_width=True):
+                            if not order_no.strip() or not address.strip(): st.error('رقم الطلب والعنوان مطلوبان.')
                             else:
                                 try:
-                                    oid = create_order({"order_no":order_no,"restaurant_id":rid,"branch_id":bmap[branch_name],"delivery_address":delivery_address,
-                                                       "delivery_lat":lat,"delivery_lng":lng,"distance_km":distance,"eta_minutes":eta,"billing_mode":billing,
-                                                       "rider_id":rider_options[rider_name],"delivery_fee":fee,"reward":reward,"discount":discount,"notes":notes},user)
-                                    st.success(f"تم إنشاء الطلب {order_no} — العمولة {commission_for_distance(distance):,.2f} ج")
-                                    st.rerun()
+                                    oid=create_order({'order_no':order_no.strip(),'restaurant_id':rid,'branch_id':bmap[bn],'delivery_address':address,'delivery_lat':point.get('lat'),'delivery_lng':point.get('lng'),'distance_km':distance,'eta_minutes':eta,'billing_mode':billing,'rider_id':opts[rider_name],'delivery_fee':fee,'reward':reward,'discount':discount,'notes':notes},user)
+                                    st.session_state.pop('newv3_point',None); st.session_state.pop('newv3_distance',None); st.success(f'تم إنشاء {order_no} بنجاح.'); st.rerun()
                                 except Exception as ex: st.error(str(ex))
-
-    if not orders.empty:
-        st.divider(); st.subheader("إدارة الطلب المحدد")
-        selected_no = st.selectbox("اختيار الطلب", orders["order_no"].tolist())
-        order = one("SELECT * FROM orders WHERE order_no=?", (selected_no,))
-        if order:
-            c1,c2,c3,c4 = st.columns(4)
-            c1.write(f"**الحالة:** {order['status']}")
-            c2.write(f"**الخدمة:** {order['delivery_fee']:,.2f} ج")
-            c3.write(f"**العمولة:** {order['rider_commission']:,.2f} ج")
-            c4.write(f"**التحصيل:** {order['billing_mode']}")
-            if user["role"] in ("OWNER","DISPATCHER"):
-                with st.form("edit_order_details"):
-                    ed_address=st.text_input("عنوان التسليم", value=order["delivery_address"] or "")
-                    ed_distance=st.number_input("المسافة (كم)", min_value=0.0, value=float(order["distance_km"] or 0), step=0.1)
-                    ed_fee=st.number_input("خدمة التوصيل", min_value=0.0, value=float(order["delivery_fee"] or 0), step=1.0)
-                    ed_notes=st.text_area("الملاحظات", value=order["notes"] or "")
-                    if st.form_submit_button("حفظ تعديل الطلب", use_container_width=True):
-                        before=dict(order)
-                        new_comm=commission_for_distance(ed_distance)
-                        with conn() as c:
-                            c.execute("UPDATE orders SET delivery_address=?,distance_km=?,delivery_fee=?,rider_commission=?,notes=? WHERE id=?",(ed_address,ed_distance,ed_fee,new_comm,ed_notes,order["id"]))
-                            after=dict(c.execute("SELECT * FROM orders WHERE id=?",(order["id"],)).fetchone())
-                        audit(user["id"],"update","order",order["id"],before=before,after=after)
-                        st.success("تم تعديل الطلب وتحديث العمولة."); st.rerun()
-                riders = df("SELECT id,name,status,active_orders FROM riders WHERE status!='غير نشط' ORDER BY active_orders,name")
-                rmap = {"بدون طيار":None}
-                if not riders.empty: rmap.update(dict(zip(riders["name"], riders["id"])))
-                current_name = "بدون طيار"
-                if order["rider_id"]:
-                    rn = one("SELECT name FROM riders WHERE id=?", (order["rider_id"],)); current_name = rn["name"] if rn else "بدون طيار"
-                sel = st.selectbox("الطيار", list(rmap), index=list(rmap).index(current_name) if current_name in rmap else 0)
-                if st.button("حفظ تعيين الطيار", use_container_width=True):
-                    try: assign_rider(order["id"],rmap[sel],user); st.success("تم تحديث التعيين."); st.rerun()
-                    except Exception as ex: st.error(str(ex))
-            allowed = transitions(order["status"])
-            if allowed:
-                ns = st.selectbox("الحالة التالية", allowed)
-                if st.button("تأكيد تغيير الحالة", use_container_width=True):
-                    try: change_order_status(order["id"],ns,user); st.success("تم تحديث الحالة."); st.rerun()
-                    except Exception as ex: st.error(str(ex))
-            if order["delivery_lat"] and order["delivery_lng"]:
-                st.link_button("🧭 فتح الملاحة للعنوان", f"https://www.google.com/maps/dir/?api=1&destination={order['delivery_lat']},{order['delivery_lng']}")
-
-
-def render_map(user):
-    header("الخريطة الحية", "كل طيار يظهر بحالته وآخر GPS معروف، والطلبات تظهر حسب موقعها المسجل.")
-    @st.fragment(run_every="5s")
-    def live_block():
-        riders = df("SELECT name,last_lat,last_lng,gps_accuracy,last_gps_at,status,active_orders FROM riders WHERE last_lat IS NOT NULL AND last_lng IS NOT NULL")
-        orders = df("SELECT order_no,delivery_address,delivery_lat,delivery_lng,status,rider_id FROM orders WHERE status IN ('جديد','تم التعيين','تم القبول','تم الاستلام','في الطريق') AND delivery_lat IS NOT NULL AND delivery_lng IS NOT NULL")
-        points = []
-        if not riders.empty:
-            for _,r in riders.iterrows(): points.append({"lat":r["last_lat"],"lon":r["last_lng"]})
-        if not orders.empty:
-            for _,r in orders.iterrows(): points.append({"lat":r["delivery_lat"],"lon":r["delivery_lng"]})
-        if points:
-            st.map(pd.DataFrame(points), latitude="lat", longitude="lon", zoom=12, height=520)
-        else:
-            st.info("لا توجد نقاط GPS أو طلبات بإحداثيات حتى الآن. على الطيار فتح شاشة التتبع والسماح بالموقع.")
-        if not riders.empty:
-            view = riders.rename(columns={"name":"الطيار","status":"الحالة","active_orders":"طلبات نشطة","gps_accuracy":"دقة GPS","last_gps_at":"آخر تحديث"})
-            st.dataframe(view[["الطيار","الحالة","طلبات نشطة","دقة GPS","آخر تحديث"]], use_container_width=True, hide_index=True)
-    live_block()
-
-
-def render_rider(user):
-    rider = one("SELECT * FROM riders WHERE id=?", (user["ref_id"],))
-    if not rider:
-        st.error("حساب الطيار غير مرتبط بطيار صالح."); return
-    header(f"واجهة الطيار — {rider['name']}", "كل ما يخص الطيار في شاشة واحدة.")
-    capture_gps(rider["id"])
-    today_att = one("SELECT * FROM attendance WHERE rider_id=? AND work_date=?", (rider["id"],today_str()))
-    c1,c2,c3 = st.columns(3)
-    c1.metric("الحالة", rider["status"])
-    c2.metric("طلبات نشطة", rider["active_orders"])
-    c3.metric("عمولة النظام", f'{float(one("SELECT COALESCE(SUM(rider_commission),0) x FROM orders WHERE rider_id=? AND status=\'تم التسليم\' AND substr(delivered_at,1,10)=?",(rider["id"],today_str()))["x"]):,.2f} ج')
-    st.subheader("الحضور")
-    a,b = st.columns(2)
-    if not today_att or not today_att["clock_in"]:
-        if a.button("🟢 تسجيل دخول", use_container_width=True):
-            aid=uid("ATT")
-            with conn() as c: c.execute("INSERT INTO attendance(id,rider_id,work_date,clock_in,status,created_at) VALUES (?,?,?,?,?,?)",(aid,rider["id"],today_str(),now_iso(),"حاضر",now_iso()))
-            st.rerun()
-    else:
-        a.success(f"دخل: {today_att['clock_in']}")
-        if not today_att["clock_out"] and b.button("🔴 تسجيل خروج", use_container_width=True):
-            with conn() as c: c.execute("UPDATE attendance SET clock_out=? WHERE id=?",(now_iso(),today_att["id"]))
-            st.rerun()
-        elif today_att["clock_out"]: b.info(f"خرج: {today_att['clock_out']}")
-    st.subheader("طلباتي")
-    my = df("SELECT order_no,status,delivery_address,distance_km,delivery_fee,rider_commission,created_at FROM orders WHERE rider_id=? AND status NOT IN ('تم التسليم','ملغى') ORDER BY created_at DESC",(rider["id"],))
-    if my.empty: st.info("لا توجد طلبات حالياً.")
-    else:
-        st.dataframe(my,use_container_width=True,hide_index=True)
-        selected = st.selectbox("الطلب الحالي", my["order_no"].tolist())
-        o=one("SELECT * FROM orders WHERE order_no=?",(selected,))
-        allowed = transitions(o["status"])
-        if allowed:
-            ns=st.selectbox("الإجراء التالي",allowed)
-            if st.button("تأكيد الإجراء",use_container_width=True):
-                try: change_order_status(o["id"],ns,user); st.success("تمت العملية."); st.rerun()
+    q="SELECT o.*,r.name restaurant,b.name branch,COALESCE(ry.name,'—') rider FROM orders o JOIN restaurants r ON r.id=o.restaurant_id JOIN branches b ON b.id=o.branch_id LEFT JOIN riders ry ON ry.id=o.rider_id WHERE 1=1"; params=[]
+    if user['role']=='RESTAURANT': q+=' AND o.restaurant_id=?'; params.append(user['ref_id'])
+    if user['role']=='RIDER': q+=' AND o.rider_id=?'; params.append(user['ref_id'])
+    s=st.text_input('🔎 ابحث عن طلب أو عنوان'); sf=st.selectbox('الحالة',['الكل','جديد','تم التعيين','تم القبول','تم الاستلام','في الطريق','تم التسليم','ملغى'])
+    if s: q+=' AND (o.order_no LIKE ? OR o.delivery_address LIKE ?)'; params += [f'%{s}%',f'%{s}%']
+    if sf!='الكل': q+=' AND o.status=?'; params.append(sf)
+    q+=' ORDER BY o.created_at DESC LIMIT 300'; orders=df(q,tuple(params))
+    if orders.empty: st.info('لا توجد طلبات مطابقة.') ; return
+    st.dataframe(orders[['order_no','restaurant','branch','status','billing_mode','rider','delivery_address','distance_km','delivery_fee','rider_commission','created_at']].rename(columns={'order_no':'الطلب','restaurant':'المطعم','branch':'الفرع','status':'الحالة','billing_mode':'التحصيل','rider':'الطيار','delivery_address':'العنوان','distance_km':'كم','delivery_fee':'الخدمة','rider_commission':'العمولة','created_at':'الوقت'}),use_container_width=True,hide_index=True)
+    if user['role'] in ('OWNER','DISPATCHER','ACCOUNTANT','RIDER'):
+        selected=st.selectbox('فتح الطلب',orders['order_no'].tolist(),key='open_order_v3'); o=order_with_names(selected)
+        if not o: return
+        metric_v3([('الحالة',o['status'],o['rider']),('الخدمة',f"{o['delivery_fee']:,.2f} ج",'قيمة التوصيل'),('العمولة',f"{o['rider_commission']:,.2f} ج",'قاعدة المسافة'),('التحصيل',o['billing_mode'],'طريقة الحساب')])
+        if user['role'] in ('OWNER','DISPATCHER'):
+            rr=df("SELECT id,name,status,active_orders FROM riders WHERE status!='غير نشط' ORDER BY active_orders,name"); names={'بدون طيار':None}; names.update(dict(zip(rr['name'],rr['id']))) if not rr.empty else None
+            current=o['rider'] if o['rider'] in names else 'بدون طيار'; sel=st.selectbox('تعيين الطيار',list(names),index=list(names).index(current),key='assignv3')
+            if st.button('حفظ التعيين',use_container_width=True):
+                try: assign_rider(o['id'],names[sel],user); st.success('تم تحديث التعيين.'); st.rerun()
                 except Exception as ex: st.error(str(ex))
-        st.link_button("🧭 فتح الملاحة",f"https://www.google.com/maps/dir/?api=1&destination={o['delivery_lat']},{o['delivery_lng']}")
-    st.subheader("تيكيت التشغيل")
-    if not my.empty:
-        o=one("SELECT o.*,r.name restaurant,b.name branch FROM orders o JOIN restaurants r ON r.id=o.restaurant_id JOIN branches b ON b.id=o.branch_id WHERE o.order_no=?",(my.iloc[0]["order_no"],))
-        ticket=f"🚚 ONWAY\nالطلب: {o['order_no']}\nالاستلام: {o['restaurant']} — {o['branch']}\nالتسليم: {o['delivery_address']}\nالمسافة: {o['distance_km']} كم\nالتحصيل: {o['billing_mode']}\nالعمولة: {o['rider_commission']:.2f} ج\nالحالة: {o['status']}"
-        st.code(ticket,language="text")
+        allowed=transitions(o['status'])
+        if user['role'] in ('OWNER','DISPATCHER','RIDER') and allowed:
+            ns=st.selectbox('الإجراء التالي',allowed,key=f'nextv3_{o["id"]}')
+            if st.button('تأكيد الإجراء',use_container_width=True):
+                try: change_order_status(o['id'],ns,user); st.success('تم تحديث الحالة.'); st.rerun()
+                except Exception as ex: st.error(str(ex))
+        ticket=f"🚚 ONWAY\nالطلب: {o['order_no']}\nالاستلام: {o['restaurant']} — {o['branch']}\nالتسليم: {o['delivery_address']}\nالتحصيل: {o['billing_mode']}\nالمسافة: {o['distance_km']} كم\nعمولة الطيار: {o['rider_commission']:.2f} ج\nالحالة: {o['status']}"
+        st.code(ticket,language='text')
+        if o['delivery_lat'] is not None: st.link_button('🧭 فتح الملاحة',f"https://www.google.com/maps/dir/?api=1&destination={o['delivery_lat']},{o['delivery_lng']}")
 
 
-def render_riders(user):
-    header("الطيارون", "إدارة حالة الأسطول، الحضور، الرصيد التشغيلي، وجودة GPS.")
-    riders = df("SELECT id,name,phone,salary,status,active_orders,last_gps_at FROM riders ORDER BY name")
-    st.dataframe(riders.rename(columns={"name":"الطيار","phone":"الهاتف","salary":"المرتب","status":"الحالة","active_orders":"طلبات نشطة","last_gps_at":"آخر GPS"}),use_container_width=True,hide_index=True)
-    if user["role"] == "OWNER":
-        with st.expander("＋ إضافة طيار"):
-            with st.form("new_rider"):
-                n=st.text_input("الاسم"); p=st.text_input("الهاتف"); sal=st.number_input("المرتب",value=float(get_setting("salary_basic",6000)))
-                if st.form_submit_button("حفظ",use_container_width=True):
-                    rid=uid("RYD")
-                    with conn() as c: c.execute("INSERT INTO riders(id,name,phone,salary,status,created_at) VALUES (?,?,?,?,?,?)",(rid,n,p,sal,"متاح",now_iso()))
-                    audit(user["id"],"create","rider",rid,after={"name":n}); st.rerun()
+def render_rider_v3(user):
+    rider=one('SELECT * FROM riders WHERE id=?',(user['ref_id'],))
+    if not rider: st.error('حساب الطيار غير مرتبط بسجل طيار صالح.'); return
+    header_v3(f"🚴 {rider['name']}","شاشة الميدان — الأزرار كبيرة والمعلومات الضرورية فقط.")
+    metric_v3([('الحالة',rider['status'],'الأسطول'),('طلبات نشطة',rider['active_orders'],'حالية'),('GPS','🟢 حديث' if gps_fresh(rider) else '🟠 غير حديث','آخر تحديث')])
+    my=df("SELECT o.*,r.name restaurant,b.name branch FROM orders o JOIN restaurants r ON r.id=o.restaurant_id JOIN branches b ON b.id=o.branch_id WHERE o.rider_id=? AND o.status NOT IN ('تم التسليم','ملغى') ORDER BY o.created_at",(rider['id'],))
+    current=my.iloc[0].to_dict() if not my.empty else None
+    route={'from':[rider['last_lat'],rider['last_lng']],'to':[current['delivery_lat'],current['delivery_lng']]} if current and rider['last_lat'] is not None and current['delivery_lat'] is not None else None
+    points=[]
+    if rider['last_lat'] is not None: points.append({'id':'self','kind':'self','icon':'🚴','lat':rider['last_lat'],'lng':rider['last_lng'],'online':gps_fresh(rider),'title':'موقعي','meta':f"دقة {rider['gps_accuracy'] or '—'} م"})
+    if current and current['delivery_lat'] is not None: points.append({'id':current['id'],'kind':'order','icon':'📦','lat':current['delivery_lat'],'lng':current['delivery_lng'],'online':True,'title':current['order_no'],'meta':current['delivery_address']})
+    res=mount_map_v3(points,center=[rider['last_lat'] or 31.2001,rider['last_lng'] or 29.9187],zoom=14,route=route,geolocation=True,key='rider_map_v3')
+    gps=getattr(res,'gps',None) if res else None
+    if gps:
+        try: record_gps(rider['id'],json.loads(gps)); st.rerun()
+        except Exception: pass
+    if current:
+        st.markdown(f'<div class="card"><div class="list-main">{current["order_no"]} — {current["restaurant"]} / {current["branch"]}</div><div class="list-meta">{current["delivery_address"]}</div><div style="margin-top:8px">{badge_v3(current["status"],"blue")} {badge_v3(current["billing_mode"],"soft")}</div></div>',unsafe_allow_html=True)
+        allowed=transitions(current['status'])
+        if allowed:
+            ns=st.selectbox('الإجراء التالي',allowed,key='rider_next_v3');
+            if st.button('تنفيذ الإجراء',use_container_width=True):
+                try: change_order_status(current['id'],ns,user); st.rerun()
+                except Exception as ex: st.error(str(ex))
+        if current['delivery_lat'] is not None: st.link_button('🧭 ابدأ الملاحة',f"https://www.google.com/maps/dir/?api=1&destination={current['delivery_lat']},{current['delivery_lng']}")
+    else: st.success('لا يوجد طلب نشط الآن. أنت جاهز لاستقبال التوجيه.')
+    att=one('SELECT * FROM attendance WHERE rider_id=? AND work_date=?',(rider['id'],today_str()))
+    if not att or not att['clock_in']:
+        if st.button('🟢 تسجيل دخول',use_container_width=True):
+            with db() as c: c.execute('INSERT INTO attendance(id,rider_id,work_date,clock_in,status,created_at) VALUES (?,?,?,?,?,?)',(uid('ATT'),rider['id'],today_str(),now_iso(),'حاضر',now_iso()))
+            st.rerun()
+    elif not att['clock_out']:
+        st.success(f"دخول: {att['clock_in']}")
+        if st.button('🔴 تسجيل خروج',use_container_width=True):
+            with db() as c: c.execute('UPDATE attendance SET clock_out=? WHERE id=?',(now_iso(),att['id']))
+            st.rerun()
 
 
-def render_restaurants(user):
-    header("المطاعم والفروع", "كل فرع مستقل محاسبياً وتشغيلياً مع نظام كاش/آجل واضح.")
-    rs=get_restaurants(False)
-    st.dataframe(rs.rename(columns={"name":"المطعم","phone":"الهاتف","billing_mode":"النظام","active":"نشط"})[["المطعم","الهاتف","النظام","نشط"]],use_container_width=True,hide_index=True)
-    if user["role"] == "OWNER":
-        with st.expander("＋ إضافة مطعم"):
-            with st.form("new_restaurant"):
-                n=st.text_input("اسم المطعم"); p=st.text_input("الهاتف"); mode=st.selectbox("التحصيل",["كاش","آجل"])
-                if st.form_submit_button("حفظ المطعم",use_container_width=True):
-                    rid=uid("RST")
-                    with conn() as c: c.execute("INSERT INTO restaurants(id,name,phone,billing_mode,created_at) VALUES (?,?,?,?,?)",(rid,n,p,mode,now_iso()))
-                    audit(user["id"],"create","restaurant",rid,after={"name":n,"billing_mode":mode}); st.rerun()
-        if not rs.empty:
-            rname=st.selectbox("اختيار مطعم لإضافة فرع",rs["name"].tolist())
-            rid=rs[rs["name"]==rname].iloc[0]["id"]
-            with st.form("new_branch"):
-                n=st.text_input("اسم الفرع"); addr=st.text_input("العنوان"); lat=st.number_input("خط العرض",value=31.2001,format="%.6f"); lng=st.number_input("خط الطول",value=29.9187,format="%.6f")
-                if st.form_submit_button("إضافة الفرع",use_container_width=True):
-                    bid=uid("BRN")
-                    with conn() as c: c.execute("INSERT INTO branches(id,restaurant_id,name,address,lat,lng,created_at) VALUES (?,?,?,?,?,?,?)",(bid,rid,n,addr,lat,lng,now_iso()))
-                    audit(user["id"],"create","branch",bid,after={"name":n,"restaurant_id":rid}); st.rerun()
+def render_riders_v3(user):
+    header_v3('الطيارون','التحكم في النشاط والتشغيل وGPS — بلا تفاصيل محاسبية غير لازمة.')
+    rs=df('SELECT * FROM riders ORDER BY active_orders,name')
+    for _,r in rs.iterrows():
+        fresh=gps_fresh(r.to_dict())
+        with st.container(border=True):
+            a,b,c,d=st.columns([2.2,1.2,1.2,1.4])
+            a.markdown(f'**{r["name"]}**<br><span class="small-note">{r["phone"] or "بدون هاتف"}</span>',unsafe_allow_html=True)
+            b.markdown(badge_v3('نشط' if r['status']!='غير نشط' else 'غير نشط','green' if r['status']!='غير نشط' else 'red'),unsafe_allow_html=True)
+            c.write(f"{int(r['active_orders'])} طلبات")
+            d.write('🟢 GPS' if fresh else '🟠 GPS')
+            if user['role']=='OWNER':
+                x,y=st.columns(2)
+                if x.button('تعطيل الطيار' if r['status']!='غير نشط' else 'تفعيل الطيار',key=f'rider_active_v3_{r["id"]}'):
+                    try: set_active('rider',r['id'],r['status']=='غير نشط',user); st.rerun()
+                    except Exception as ex: st.error(str(ex))
+                if y.button('تفاصيل',key=f'rider_detail_v3_{r["id"]}'): st.session_state[f'rd_{r["id"]}']=not st.session_state.get(f'rd_{r["id"]}',False)
+                if st.session_state.get(f'rd_{r["id"]}',False): st.write(f"المرتب: {r['salary']:,.2f} ج • آخر GPS: {r['last_gps_at'] or '—'} • الدقة: {r['gps_accuracy'] or '—'} م")
+    if user['role']=='OWNER':
+        with st.expander('＋ إضافة طيار'):
+            with st.form('rider_add_v3'):
+                a,b,c=st.columns(3); n=a.text_input('الاسم'); p=b.text_input('الهاتف'); sal=c.number_input('المرتب',min_value=0.0,value=float(get_setting('salary_basic',6000)),step=100.0)
+                if st.form_submit_button('إضافة الطيار',use_container_width=True):
+                    try: rid=create_rider({'name':n,'phone':p,'salary':sal},user); st.success(f'تمت إضافة الطيار: {rid}'); st.rerun()
+                    except Exception as ex: st.error(str(ex))
 
 
-def render_attendance(user):
-    header("الحضور والانصراف والمرتبات", "المرتب الأساسي 6000 ج، وإجازة بعذر = يوم، وبدون عذر = 1.25 يوم.")
-    riders=df("SELECT id,name,salary FROM riders ORDER BY name")
-    if riders.empty: st.info("أضف طيارين أولاً."); return
-    selected=st.selectbox("الطيار",riders["name"].tolist())
-    rid=riders[riders["name"]==selected].iloc[0]["id"]
-    month=st.date_input("بداية الشهر",date.today().replace(day=1))
-    month_start=date(month.year,month.month,1); month_end=(month_start.replace(day=28)+timedelta(days=4)).replace(day=1)-timedelta(days=1)
-    att=df("SELECT work_date,clock_in,clock_out,status,reason FROM attendance WHERE rider_id=? AND work_date BETWEEN ? AND ? ORDER BY work_date",(rid,month_start.isoformat(),month_end.isoformat()))
-    absent_exc=int((att["status"]=="إجازة بعذر").sum()) if not att.empty else 0
-    absent_unexc=int((att["status"]=="إجازة بدون عذر").sum()) if not att.empty else 0
-    base=float(riders[riders["id"]==rid].iloc[0]["salary"])
-    daily=base/float(get_setting("working_days",26))
-    deduction=daily*(absent_exc*float(get_setting("excused_leave_days",1))+absent_unexc*float(get_setting("unexcused_leave_days",1.25)))
-    net=max(0,base-deduction)
-    show_metrics([("أيام بعذر",absent_exc),("بدون عذر",absent_unexc),("قيمة اليوم",f"{daily:,.2f} ج"),("الخصم",f"{deduction:,.2f} ج"),("صافي المرتب",f"{net:,.2f} ج")])
-    if not att.empty: st.dataframe(att,use_container_width=True,hide_index=True)
-    if user["role"] in ("OWNER","ACCOUNTANT"):
-        with st.form("attendance_manual"):
-            d=st.date_input("اليوم",date.today()); status=st.selectbox("الحالة",["حاضر","إجازة بعذر","إجازة بدون عذر","غياب"]); reason=st.text_input("السبب")
-            if st.form_submit_button("حفظ الحالة",use_container_width=True):
-                aid=uid("ATT")
-                with conn() as c:
-                    c.execute("INSERT INTO attendance(id,rider_id,work_date,status,reason,created_at) VALUES (?,?,?,?,?,?) ON CONFLICT(rider_id,work_date) DO UPDATE SET status=excluded.status,reason=excluded.reason",(aid,rid,d.isoformat(),status,reason,now_iso()))
-                audit(user["id"],"upsert","attendance",aid,after={"rider_id":rid,"date":d.isoformat(),"status":status}); st.rerun()
+def render_restaurants_v3(user):
+    header_v3('المطاعم والفروع','إدارة النشاط والحساب، واختيار موقع الفرع من الخريطة بالنقر المباشر.')
+    rs=all_restaurants()
+    for _,r in rs.iterrows():
+        bs=branches_for(r['id'],False)
+        with st.container(border=True):
+            a,b,c=st.columns([2.3,1.2,1.5]); a.markdown(f'**{r["name"]}**<br><span class="small-note">{r["phone"] or ""}</span>',unsafe_allow_html=True); b.markdown(badge_v3('نشط' if r['active'] else 'غير نشط','green' if r['active'] else 'red'),unsafe_allow_html=True); c.write(f"{r['billing_mode']} • {len(bs)} فروع")
+            if user['role']=='OWNER':
+                x,y=st.columns(2)
+                if x.button('تعطيل المطعم' if r['active'] else 'تفعيل المطعم',key=f'rest_act_v3_{r["id"]}'):
+                    set_active('restaurant',r['id'],not bool(r['active']),user); st.rerun()
+                if y.button('إضافة/إدارة فرع',key=f'branch_toggle_v3_{r["id"]}'): st.session_state[f'br_{r["id"]}']=not st.session_state.get(f'br_{r["id"]}',False)
+            if not bs.empty:
+                for _,br in bs.iterrows():
+                    x,y=st.columns([3.5,1])
+                    x.markdown(f'• **{br["name"]}** — {br["address"] or "بدون عنوان"} — {"نشط" if br["active"] else "غير نشط"}',unsafe_allow_html=True)
+                    if user['role']=='OWNER' and y.button('تعطيل' if br['active'] else 'تفعيل',key=f'br_act_v3_{br["id"]}'):
+                        set_active('branch',br['id'],not bool(br['active']),user); st.rerun()
+            if st.session_state.get(f'br_{r["id"]}',False) and user['role']=='OWNER':
+                st.markdown('<div class="section-sub">اضغط على موقع الفرع في الخريطة. العنوان والإحداثيات تُلتقطان تلقائياً.</div>',unsafe_allow_html=True)
+                if 'branch_point_v3' not in st.session_state: st.session_state.branch_point_v3={}
+                p=st.session_state.branch_point_v3; res=mount_map_v3(center=[31.2001,29.9187],zoom=12,clickable=True,key=f'branch_map_v3_{r["id"]}')
+                click=getattr(res,'map_click',None) if res else None
+                if click:
+                    try: st.session_state.branch_point_v3=json.loads(click); st.rerun()
+                    except Exception: pass
+                p=st.session_state.branch_point_v3
+                if p.get('lat') is not None: st.success('موقع الفرع: '+(p.get('address') or f"{p['lat']}, {p['lng']}"))
+                with st.form(f'branch_form_v3_{r["id"]}'):
+                    n=st.text_input('اسم الفرع'); addr=st.text_input('العنوان',value=p.get('address',''))
+                    if st.form_submit_button('حفظ الفرع',use_container_width=True):
+                        try: create_branch({'restaurant_id':r['id'],'name':n,'address':addr,'lat':p.get('lat'),'lng':p.get('lng')},user); st.session_state.branch_point_v3={}; st.success('تمت إضافة الفرع.'); st.rerun()
+                        except Exception as ex: st.error(str(ex))
+    if user['role']=='OWNER':
+        with st.expander('＋ إضافة مطعم'):
+            with st.form('restaurant_add_v3'):
+                a,b=st.columns(2); n=a.text_input('اسم المطعم'); p=b.text_input('الهاتف'); mode=st.selectbox('طريقة التحصيل',['كاش','آجل'])
+                if st.form_submit_button('حفظ المطعم',use_container_width=True):
+                    try: create_restaurant({'name':n,'phone':p,'billing_mode':mode},user); st.success('تمت إضافة المطعم.'); st.rerun()
+                    except Exception as ex: st.error(str(ex))
 
 
-def render_settlements(user):
-    header("التسويات والحسابات", "كل حركة مالية مرتبطة بطلب ومرجع، مع منع إعادة التسوية لنفس الطلب.")
-    tab1,tab2=st.tabs(["تصفية طيار","تصفية مطعم آجل"])
-    with tab1:
-        riders=df("SELECT id,name FROM riders WHERE status!='غير نشط' ORDER BY name")
-        if not riders.empty:
-            rn=st.selectbox("الطيار",riders["name"].tolist(),key="rs1"); rid=riders[riders["name"]==rn].iloc[0]["id"]
-            start=st.date_input("من",date.today(),key="sd1"); end=st.date_input("إلى",date.today(),key="ed1")
-            o=df("SELECT * FROM orders WHERE rider_id=? AND billing_mode='كاش' AND status='تم التسليم' AND substr(delivered_at,1,10) BETWEEN ? AND ? ORDER BY delivered_at",(rid,start.isoformat(),end.isoformat()))
-            if o.empty: st.info("لا توجد طلبات كاش غير مسواة في الفترة.")
-            else:
-                already=df("SELECT si.order_id FROM settlement_items si JOIN settlements s ON s.id=si.settlement_id WHERE s.kind='طيار'",)
-                done=set(already["order_id"].tolist()) if not already.empty else set()
-                o=o[~o["id"].isin(done)]
-                cash=float(o["cash_collected"].sum()); comm=float(o["rider_commission"].sum()); rew=float(o["reward"].sum()); disc=float(o["discount"].sum())
-                due=cash-(comm+rew)+disc
-                show_metrics([("الكاش المحصل",f"{cash:,.2f} ج"),("العمولات",f"{comm:,.2f} ج"),("المكافآت",f"{rew:,.2f} ج"),("الخصومات",f"{disc:,.2f} ج"),("المستحق للتوريد",f"{due:,.2f} ج")])
-                st.dataframe(o[["order_no","cash_collected","rider_commission","reward","discount"]],use_container_width=True,hide_index=True)
-                paid=st.number_input("المبلغ الذي تم توريده الآن",min_value=0.0,value=max(0.0,due),step=1.0,key="paid_rider")
-                if st.button("إغلاق التصفية وتسجيل التوريد",use_container_width=True):
-                    sid=uid("SET"); stamp=now_iso()
-                    with conn() as c:
-                        c.execute("INSERT INTO settlements(id,kind,party_id,period_start,period_end,gross,commissions,rewards,discounts,cash_due,paid,created_by,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",(sid,"طيار",rid,start.isoformat(),end.isoformat(),cash,comm,rew,disc,due,paid,user["id"],stamp))
-                        for oid,amt in zip(o["id"],o["cash_collected"]): c.execute("INSERT INTO settlement_items(id,settlement_id,order_id,amount) VALUES (?,?,?,?)",(uid("ITM"),sid,oid,float(amt)))
-                        if paid>0: c.execute("INSERT INTO ledger(txn_no,txn_type,account_type,account_id,amount,direction,reference_id,description,created_by,created_at) VALUES (?,?,?,?,?,?,?,?,?,?)",(uid("TXN"),"توريد طيار","خزينة",None,paid,"داخل",sid,f"توريد الطيار {rn}",user["id"],stamp))
-                    audit(user["id"],"settle","rider",rid,after={"settlement":sid,"paid":paid}); st.success("تمت التصفية."); st.rerun()
-    with tab2:
-        rs=get_restaurants()
-        credit=rs[rs["billing_mode"]=="آجل"] if not rs.empty else rs
-        if credit.empty: st.info("لا توجد مطاعم آجلة.")
-        else:
-            rn=st.selectbox("المطعم",credit["name"].tolist(),key="cr1"); rid=credit[credit["name"]==rn].iloc[0]["id"]
-            end=date.today(); start=end-timedelta(days=6)
-            due=float(df("SELECT COALESCE(SUM(delivery_fee),0) x FROM orders WHERE restaurant_id=? AND billing_mode='آجل' AND status='تم التسليم' AND substr(delivered_at,1,10) BETWEEN ? AND ?",(rid,start.isoformat(),end.isoformat()))["x"][0])
-            paid=float(df("SELECT COALESCE(SUM(paid),0) x FROM settlements WHERE kind='مطعم' AND party_id=?",(rid,))["x"][0])
-            outstanding=max(0,due-paid)
-            show_metrics([("خدمات الفترة",f"{due:,.2f} ج"),("المدفوع سابقاً",f"{paid:,.2f} ج"),("المستحق",f"{outstanding:,.2f} ج")])
-            p=st.number_input("مبلغ التحصيل",min_value=0.0,value=outstanding,step=1.0,key="restpaid")
-            if st.button("تسجيل تحصيل المطعم",use_container_width=True):
-                sid=uid("SET")
-                with conn() as c:
-                    c.execute("INSERT INTO settlements(id,kind,party_id,period_start,period_end,gross,paid,created_by,created_at) VALUES (?,?,?,?,?,?,?,?,?)",(sid,"مطعم",rid,start.isoformat(),end.isoformat(),due,p,user["id"],now_iso()))
-                    if p>0: c.execute("INSERT INTO ledger(txn_no,txn_type,account_type,account_id,amount,direction,reference_id,description,created_by,created_at) VALUES (?,?,?,?,?,?,?,?,?,?)",(uid("TXN"),"تحصيل مطعم آجل","خزينة",None,p,"داخل",sid,f"تحصيل {rn}",user["id"],now_iso()))
-                audit(user["id"],"settle","restaurant",rid,after={"settlement":sid,"paid":p}); st.success("تم التسجيل."); st.rerun()
+def render_users_v3(user):
+    header_v3('المستخدمون والأمان','الحسابات تُعرض بالحالة والدور. PIN القديم لا يُكشف؛ يمكنك إعادة تعيينه وإظهار الجديد مرة واحدة.')
+    us=df('SELECT id,name,email,role,ref_id,active,created_at FROM users ORDER BY name')
+    for _,u in us.iterrows():
+        with st.container(border=True):
+            a,b,c,d=st.columns([2.1,1,1,1.5]); a.markdown(f'**{u["name"]}**<br><span class="small-note">{u["email"]}</span>',unsafe_allow_html=True); b.write(role_label(u['role'])); c.markdown(badge_v3('نشط' if u['active'] else 'غير نشط','green' if u['active'] else 'red'),unsafe_allow_html=True); d.write('PIN: ••••••')
+            if user['role']=='OWNER' and u['id']!=user['id']:
+                x,y=st.columns(2)
+                if x.button('تعطيل الحساب' if u['active'] else 'تفعيل الحساب',key=f'user_act_v3_{u["id"]}'):
+                    set_active('user',u['id'],not bool(u['active']),user); st.rerun()
+                if y.button('توليد PIN جديد',key=f'user_pin_v3_{u["id"]}'):
+                    pin=reset_user_pin(u['id'],user); st.session_state.generated_pin_v3={'name':u['name'],'pin':pin}; st.rerun()
+    if st.session_state.get('generated_pin_v3'):
+        x=st.session_state.generated_pin_v3; st.success(f"PIN جديد لـ {x['name']}: {x['pin']} — خزّنه الآن. لن نعرض الرقم السابق.")
+        if st.button('إخفاء PIN',key='hide_pin_v3'): st.session_state.pop('generated_pin_v3',None); st.rerun()
+    if user['role']=='OWNER':
+        with st.expander('＋ إنشاء مستخدم'):
+            with st.form('user_add_v3'):
+                a,b=st.columns(2); n=a.text_input('الاسم'); e=b.text_input('البريد'); c,d=st.columns(2); role=c.selectbox('الدور',['DISPATCHER','ACCOUNTANT','RIDER','RESTAURANT']); pin=d.text_input('PIN أولي',type='password',max_chars=8); ref=None
+                if role=='RIDER':
+                    rr=df('SELECT id,name FROM riders ORDER BY name')
+                    if not rr.empty: rn=st.selectbox('ربط الطيار',rr['name'].tolist()); ref=rr[rr['name']==rn].iloc[0]['id']
+                if role=='RESTAURANT':
+                    rr=all_restaurants()
+                    if not rr.empty: rn=st.selectbox('ربط المطعم',rr['name'].tolist()); ref=rr[rr['name']==rn].iloc[0]['id']
+                if st.form_submit_button('إنشاء المستخدم',use_container_width=True):
+                    try: create_user({'name':n,'email':e,'role':role,'pin':pin,'ref_id':ref},user); st.success('تم إنشاء المستخدم.'); st.rerun()
+                    except Exception as ex: st.error(str(ex))
 
 
-def render_users(user):
-    header("المستخدمون والصلاحيات", "كل مستخدم يرى ما يخص اختصاصه، مع تسجيل الدخول والتعديلات في سجل التدقيق.")
-    us=df("SELECT id,name,email,role,ref_id,active,created_at FROM users ORDER BY name")
-    st.dataframe(us,use_container_width=True,hide_index=True)
-    if user["role"]=="OWNER":
-        with st.expander("＋ إضافة مستخدم"):
-            riders=df("SELECT id,name FROM riders ORDER BY name")
-            roles=["DISPATCHER","ACCOUNTANT","RIDER"] + (["RESTAURANT"] if not get_restaurants().empty else [])
-            with st.form("new_user"):
-                n=st.text_input("الاسم"); e=st.text_input("البريد").strip().lower(); role=st.selectbox("الدور",roles); pin=st.text_input("PIN",type="password")
-                ref=None
-                if role=="RIDER" and not riders.empty:
-                    rn=st.selectbox("الطيار",riders["name"].tolist()); ref=riders[riders["name"]==rn].iloc[0]["id"]
-                if role=="RESTAURANT":
-                    rs=get_restaurants(); rn=st.selectbox("المطعم",rs["name"].tolist()); ref=rs[rs["name"]==rn].iloc[0]["id"]
-                if st.form_submit_button("إنشاء المستخدم",use_container_width=True):
-                    if not n or "@" not in e or len(pin)<4: st.error("راجع البيانات.")
-                    else:
-                        try:
-                            uidv=uid("USR")
-                            with conn() as c: c.execute("INSERT INTO users(id,name,email,role,ref_id,pin_hash,active,created_at) VALUES (?,?,?,?,?,?,1,?)",(uidv,n,e,role,ref,hash_pin(pin),now_iso()))
-                            audit(user["id"],"create","user",uidv,after={"name":n,"email":e,"role":role,"ref_id":ref}); st.success("تم إنشاء المستخدم."); st.rerun()
-                        except sqlite3.IntegrityError: st.error("البريد مستخدم بالفعل.")
-
-
-def export_all():
-    tables=list(SCHEMA.keys())
+def render_tools_v3(user):
+    header_v3('الأدوات','النسخ الاحتياطي والإعدادات والمراجعة المتقدمة.')
+    if user['role']=='OWNER':
+        a,b,c=st.columns(3); salary=a.number_input('المرتب الأساسي',value=float(get_setting('salary_basic',6000)),step=100.0); work=b.number_input('أيام العمل',value=float(get_setting('working_days',26)),min_value=1.0); fresh=c.number_input('GPS حديث خلال (ثانية)',value=float(get_setting('gps_fresh_seconds',30)),min_value=5.0)
+        if st.button('حفظ إعدادات التشغيل',use_container_width=True): set_setting('salary_basic',salary); set_setting('working_days',work); set_setting('gps_fresh_seconds',fresh); st.success('تم الحفظ.')
     mem=io.BytesIO()
-    with zipfile.ZipFile(mem,"w",zipfile.ZIP_DEFLATED) as z:
-        for t in tables:
-            d=df(f"SELECT * FROM {t}")
-            z.writestr(f"{t}.csv", d.to_csv(index=False,encoding="utf-8-sig"))
-    return mem.getvalue()
+    with zipfile.ZipFile(mem,'w',zipfile.ZIP_DEFLATED) as z:
+        for t in SCHEMA: z.writestr(f'{t}.csv',df(f'SELECT * FROM {t}').to_csv(index=False,encoding='utf-8-sig'))
+    st.download_button('📦 تنزيل نسخة احتياطية',data=mem.getvalue(),file_name=f'ONWAY_Backup_{today_str()}.zip',mime='application/zip',use_container_width=True)
+    if user['role'] in ('OWNER','ACCOUNTANT'):
+        with st.expander('سجل التدقيق'): st.dataframe(df("SELECT created_at as 'الوقت',actor_id as 'المستخدم',action as 'العملية',entity as 'الكيان',entity_id as 'المعرف' FROM audit_log ORDER BY id DESC LIMIT 500"),use_container_width=True,hide_index=True)
+        with st.expander('دفتر الخزينة'): st.dataframe(df("SELECT created_at as 'الوقت',txn_no as 'الحركة',txn_type as 'النوع',amount as 'المبلغ',direction as 'الاتجاه',reference_id as 'المرجع' FROM ledger ORDER BY id DESC LIMIT 500"),use_container_width=True,hide_index=True)
 
 
-def render_tools(user):
-    header("أدوات النظام", "نسخ احتياطي، بيانات مرجعية، إعدادات أساسية، وفحص الصحة.")
-    if user["role"]=="OWNER":
-        st.subheader("إعدادات الحساب")
-        a,b,c=st.columns(3)
-        salary=a.number_input("المرتب الأساسي",value=float(get_setting("salary_basic",6000)))
-        working=b.number_input("أيام العمل الشهرية",value=float(get_setting("working_days",26)),min_value=1.0)
-        gps=a if False else c
-        fresh=gps.number_input("اعتبار GPS جديداً خلال (ثانية)",value=float(get_setting("gps_fresh_seconds",30)),min_value=5.0)
-        if st.button("حفظ الإعدادات",use_container_width=True):
-            set_setting("salary_basic",salary); set_setting("working_days",working); set_setting("gps_fresh_seconds",fresh); st.success("تم حفظ الإعدادات.")
-    st.subheader("النسخ الاحتياطي")
-    st.download_button("📦 تنزيل كل بيانات النظام",data=export_all(),file_name=f"ONWAY_Backup_{today_str()}.zip",mime="application/zip",use_container_width=True)
-    st.caption("النسخة تحتوي كل الجداول بصيغة CSV UTF-8 وتصلح للحفظ والمراجعة أو إعادة البناء.")
-    if user["role"] in ("OWNER","ACCOUNTANT"):
-        with st.expander("سجل التدقيق المالي والتشغيلي"):
-            al=df("SELECT created_at as 'الوقت',actor_id as 'المستخدم',action as 'العملية',entity as 'الكيان',entity_id as 'المعرف' FROM audit_log ORDER BY id DESC LIMIT 200")
-            st.dataframe(al,use_container_width=True,hide_index=True)
-        with st.expander("دفتر الخزينة"):
-            lg=df("SELECT created_at as 'الوقت',txn_no as 'الحركة',txn_type as 'النوع',amount as 'المبلغ',direction as 'الاتجاه',reference_id as 'المرجع' FROM ledger ORDER BY id DESC LIMIT 200")
-            st.dataframe(lg,use_container_width=True,hide_index=True)
-    st.subheader("فحص الصحة")
-    checks=[]
-    with conn() as c:
-        for t in SCHEMA: 
-            try: c.execute(f"SELECT 1 FROM {t} LIMIT 1"); checks.append((t,"OK"))
-            except Exception as ex: checks.append((t,f"FAIL {ex}"))
-    st.dataframe(pd.DataFrame(checks,columns=["الجدول","الحالة"]),use_container_width=True,hide_index=True)
-    st.success("Health Check مكتمل.")
-
-
-def render_analysis(user):
-    header("التحليل والأداء", "المؤشرات المشتقة لمراجعة الإنتاجية، التغطية، والماليات.")
-    orders=df("SELECT * FROM orders")
-    if orders.empty: st.info("لا توجد بيانات كافية للتحليل بعد."); return
-    orders["day"]=orders["created_at"].str[:10]
-    daily=orders.groupby("day").agg(طلبات=("id","count"),خدمة=("delivery_fee","sum"),عمولات=("rider_commission","sum")).reset_index()
-    completed=orders.dropna(subset=["delivered_at"]).copy()
-    avg_minutes=0
-    on_time=0
-    if not completed.empty:
-        vals=[]
-        for _,r in completed.iterrows():
-            try: vals.append((datetime.strptime(r["delivered_at"],"%Y-%m-%d %H:%M:%S")-datetime.strptime(r["created_at"],"%Y-%m-%d %H:%M:%S")).total_seconds()/60)
-            except: pass
-        if vals: avg_minutes=sum(vals)/len(vals)
-    show_metrics([("متوسط زمن الطلب",f"{avg_minutes:,.1f} دقيقة"),("نسبة التسليم",f"{(len(completed)/len(orders)*100):,.1f}%"),("متوسط العمولة",f"{orders['rider_commission'].mean():,.2f} ج")])
-    st.subheader("الطلبات والخدمة اليومية")
-    st.line_chart(daily.set_index("day")[["طلبات","خدمة","عمولات"]])
-    c1,c2=st.columns(2)
-    with c1:
-        top=orders.groupby("rider_id").size().reset_index(name="طلبات").sort_values("طلبات",ascending=False).head(10)
-        if not top.empty:
-            names={x["id"]:x["name"] for x in df("SELECT id,name FROM riders").to_dict("records")}
-            top["الطيار"]=top["rider_id"].map(names).fillna("غير معين")
-            st.dataframe(top[["الطيار","طلبات"]],use_container_width=True,hide_index=True)
-    with c2:
-        by_status=orders.groupby("status").size().reset_index(name="عدد")
-        st.bar_chart(by_status.set_index("status"))
-
-
-def sidebar(user):
+def render_nav_v3(user):
     st.sidebar.markdown(f'<div class="sidebar-title">🚚 {APP_NAME}</div><div class="sidebar-sub">{user["name"]} • {role_label(user["role"])}</div>',unsafe_allow_html=True)
-    role=user["role"]
-    if role=="RIDER": menu=[("الرئيسية","rider"),("الخريطة","map")]
-    elif role=="RESTAURANT": menu=[("الرئيسية","dashboard"),("طلبات المطعم","orders")]
-    else:
-        menu=[("الرئيسية","dashboard"),("الطلبات","orders"),("الخريطة الحية","map"),("الطيارون","riders"),("المطاعم والفروع","restaurants"),("الحضور والمرتبات","attendance"),("التسويات","settlements"),("التحليل","analysis"),("المستخدمون","users"),("أدوات النظام","tools")]
-    labels=[x[0] for x in menu]
-    choice=st.sidebar.radio("التنقل",labels,index=0)
-    if st.sidebar.button("تسجيل الخروج",use_container_width=True):
-        st.session_state.pop("user",None); st.rerun()
+    role=user['role']
+    if role=='OWNER': menu=[('الرئيسية','dashboard'),('الطلبات','orders'),('🗺️ الخريطة الحية','map'),('الطيارون','riders'),('المطاعم والفروع','restaurants'),('الحضور والمرتبات','attendance'),('التسويات','settlements'),('التحليل','analysis'),('المستخدمون','users'),('الأدوات','tools')]
+    elif role=='DISPATCHER': menu=[('الرئيسية','dashboard'),('الطلبات','orders'),('🗺️ الخريطة الحية','map'),('الطيارون','riders'),('المطاعم والفروع','restaurants')]
+    elif role=='ACCOUNTANT': menu=[('الرئيسية','dashboard'),('الطلبات','orders'),('الطيارون','riders'),('المطاعم والفروع','restaurants'),('الحضور والمرتبات','attendance'),('التسويات','settlements'),('التحليل','analysis'),('الأدوات','tools')]
+    elif role=='RIDER': menu=[('مهمتي الآن','rider'),('خريطتي','map')]
+    else: menu=[('الرئيسية','dashboard'),('طلبات المطعم','orders')]
+    choice=st.sidebar.radio('التنقل', [x[0] for x in menu],index=0)
+    st.sidebar.markdown('<div style="height:8px"></div>',unsafe_allow_html=True)
+    if st.sidebar.button('تسجيل الخروج',use_container_width=True): st.session_state.pop('user',None); st.rerun()
     return dict(menu)[choice]
 
 
 # =========================================================
-# نقطة التشغيل
+# التشغيل النهائي — ONWAY V3
 # =========================================================
 if "user" not in st.session_state:
     login()
     st.stop()
 
 user=st.session_state.user
-page=sidebar(user)
-
+page=render_nav_v3(user)
 try:
-    {
-        "dashboard":render_dashboard,
-        "orders":render_orders,
-        "map":render_map,
-        "rider":render_rider,
-        "riders":render_riders,
-        "restaurants":render_restaurants,
-        "attendance":render_attendance,
-        "settlements":render_settlements,
-        "users":render_users,
-        "tools":render_tools,
-        "analysis":render_analysis,
-    }[page](user)
+    if page=="dashboard": render_dashboard_v3(user)
+    elif page=="orders": render_orders_v3(user)
+    elif page=="map": render_live_map_v3(user)
+    elif page=="rider": render_rider_v3(user)
+    elif page=="riders": render_riders_v3(user)
+    elif page=="restaurants": render_restaurants_v3(user)
+    elif page=="attendance": render_attendance(user)
+    elif page=="settlements": render_settlements(user)
+    elif page=="users": render_users_v3(user)
+    elif page=="tools": render_tools_v3(user)
+    elif page=="analysis": render_analysis(user)
 except Exception as ex:
-    st.error("حدث خطأ غير متوقع داخل الواجهة.")
-    st.exception(ex)
+    st.error("حدث خطأ داخل النظام وتم منع توقف الواجهة.")
+    if user.get("role")=="OWNER": st.exception(ex)
