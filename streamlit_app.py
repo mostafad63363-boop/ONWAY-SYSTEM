@@ -30,25 +30,32 @@ st.set_page_config(
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@500;600;700;800;900&display=swap');
-:root{--on:#c62828;--on2:#8e1717;--ink:#111827;--muted:#6b7280;--line:#e5e7eb;--soft:#f5f6f8;--good:#15803d;--warn:#a16207;--blue:#1d4ed8;--white:#fff;--shadow:0 8px 24px rgba(17,24,39,.06)}
-html,body,[class*=\"css\"]{font-family:'Cairo',sans-serif!important}
-[data-testid=\"stAppViewContainer\"]{background:var(--soft)}
-[data-testid=\"stHeader\"]{background:rgba(245,246,248,.88)}
-[data-testid=\"stSidebar\"]{background:linear-gradient(180deg,#0f172a 0%,#182231 100%)}
-[data-testid=\"stSidebar\"] *{color:#fff!important}
-[data-testid=\"stDecoration\"],#MainMenu,footer{display:none}
-.block-container{max-width:1500px;padding:.55rem .8rem 5rem}
-.onway-hero{background:linear-gradient(135deg,#0f172a 0%,#1f2937 57%,#7f1d1d 100%);color:#fff;border-radius:22px;padding:15px 18px;margin-bottom:10px;box-shadow:0 14px 34px rgba(0,0,0,.09)}
-.onway-hero h1{margin:0;font-size:1.52rem;font-weight:900;line-height:1.2}.onway-hero p{margin:.25rem 0 0;color:#d1d5db;font-size:.8rem}
-.metric{background:#fff;border:1px solid var(--line);border-radius:17px;padding:12px;min-height:84px;box-shadow:0 6px 18px rgba(17,24,39,.04)}.metric .v{font-size:1.42rem;font-weight:900;line-height:1.05;color:var(--ink)}.metric .l{font-size:.76rem;color:var(--muted);margin-top:5px}.metric .small{font-size:.66rem;color:var(--muted);margin-top:2px}
-.status-pill,.status-active,.status-done,.status-cancel,.status-warn{display:inline-block;padding:.18rem .55rem;border-radius:999px;font-size:.72rem;font-weight:800}.status-pill{background:#f3f4f6;color:#374151}.status-active{background:#eff6ff;color:#1d4ed8}.status-done{background:#ecfdf5;color:#047857}.status-cancel{background:#fef2f2;color:#b91c1c}.status-warn{background:#fffbeb;color:#a16207}
-.section-title{font-size:1.02rem;font-weight:900;color:var(--ink);margin:.38rem 0 .42rem}.section-sub{font-size:.74rem;color:var(--muted);margin-bottom:.55rem}.small-note{font-size:.68rem;color:var(--muted)}
-.card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:12px 13px;box-shadow:var(--shadow)}
-.alert{border-radius:13px;padding:9px 11px;font-size:.78rem;font-weight:700;margin:7px 0}.alert-green{background:#ecfdf5;color:#166534}.alert-amber{background:#fffbeb;color:#92400e}.alert-red{background:#fef2f2;color:#991b1b}.alert-blue{background:#eff6ff;color:#1e40af}
-.stButton>button,.stDownloadButton>button,.stLinkButton>a{min-height:46px;border-radius:12px!important;font-weight:800!important}.stTextInput input,.stNumberInput input,.stTextArea textarea,.stDateInput input,[data-baseweb=\"select\"]>div{min-height:44px;border-radius:12px!important}
-[data-testid=\"stExpander\"]{border:1px solid var(--line);border-radius:15px;background:#fff}.stDataFrame{border-radius:14px;overflow:hidden}
-.sidebar-title{color:#fff;font-size:1.25rem;font-weight:900;text-align:center;margin:12px 0 3px}.sidebar-sub{color:#cbd5e1;font-size:.72rem;text-align:center;margin-bottom:10px}
-@media(max-width:700px){.block-container{padding:.4rem .5rem 5rem}.onway-hero{padding:12px 13px;border-radius:17px}.onway-hero h1{font-size:1.28rem}.onway-hero p{font-size:.72rem}.metric{min-height:78px;padding:10px}.metric .v{font-size:1.2rem}.section-title{font-size:.98rem}.stButton>button,.stDownloadButton>button,.stLinkButton>a{min-height:54px;font-size:1rem!important}.stTextInput input,.stNumberInput input,.stTextArea textarea,[data-baseweb=\"select\"]>div{min-height:50px;font-size:16px!important}.stDataFrame{font-size:.72rem}}
+:root{--brand:#e53935;--brand2:#b71c1c;--navy:#0b1324;--navy2:#17233a;--page:#f5f7fa;--card:#fff;--ink:#101828;--muted:#667085;--line:#e4e7ec;--good:#12b76a;--warn:#f79009;--danger:#d92d20;--info:#2e90fa;--purple:#7a5af8;--shadow:0 8px 24px rgba(16,24,40,.065);--shadow2:0 18px 42px rgba(16,24,40,.11)}
+html,body,[class*="css"]{font-family:'Cairo',Tahoma,Arial,sans-serif!important}*,*:before,*:after{box-sizing:border-box}
+[data-testid="stAppViewContainer"]{background:linear-gradient(180deg,#fafbfd 0%,var(--page) 100%)}
+[data-testid="stHeader"]{background:rgba(250,251,253,.78);backdrop-filter:blur(12px)}[data-testid="stDecoration"],#MainMenu,footer{display:none}
+.block-container{max-width:1500px;padding:.65rem .8rem 4.6rem}
+[data-testid="stSidebar"]{background:linear-gradient(180deg,#0a1020 0%,#101a2c 55%,#172338 100%);border-left:1px solid rgba(255,255,255,.06)}
+[data-testid="stSidebar"] *{color:#f8fafc!important}[data-testid="stSidebar"] [data-testid="stRadio"] label{padding:.62rem .72rem!important;border-radius:12px!important;margin:.14rem 0!important;font-size:.88rem!important;font-weight:800!important;transition:.16s}[data-testid="stSidebar"] [data-testid="stRadio"] label:hover{background:rgba(255,255,255,.065)}
+.sidebar-title{font-size:1.25rem;font-weight:900;text-align:center;letter-spacing:-.3px;margin:.55rem 0 .1rem}.sidebar-sub{font-size:.71rem!important;color:#cbd5e1!important;text-align:center;margin-bottom:1rem}
+.app-topbar{display:flex;align-items:center;justify-content:space-between;gap:10px;background:rgba(255,255,255,.9);border:1px solid rgba(228,231,236,.9);border-radius:18px;padding:9px 12px;margin-bottom:10px;box-shadow:var(--shadow);backdrop-filter:blur(12px)}
+.app-brand{display:flex;align-items:center;gap:9px;font-size:.92rem;font-weight:900;color:var(--ink)}.app-brand-mark{width:34px;height:34px;border-radius:11px;display:grid;place-items:center;background:linear-gradient(135deg,var(--brand),#ff6a63);color:#fff;box-shadow:0 7px 16px rgba(229,57,53,.22)}
+.user-chip{display:flex;align-items:center;gap:7px;background:#f8fafc;border:1px solid var(--line);border-radius:999px;padding:5px 8px;color:var(--ink);font-size:.65rem;font-weight:900}.user-dot{width:8px;height:8px;border-radius:50%;background:var(--good);box-shadow:0 0 0 4px rgba(18,183,106,.10)}
+.onway-hero{position:relative;overflow:hidden;background:linear-gradient(135deg,#0e1626 0%,#162135 58%,#8f1d1d 100%);color:#fff;border-radius:21px;padding:16px 18px;margin-bottom:11px;box-shadow:var(--shadow2)}
+.onway-hero:after{content:"";position:absolute;left:-55px;bottom:-95px;width:180px;height:180px;border-radius:50%;background:rgba(255,255,255,.045)}.onway-hero h1{margin:0;font-size:1.38rem;font-weight:900;line-height:1.24;letter-spacing:-.45px}.onway-hero p{margin:.25rem 0 0;color:#d7deea;font-size:.73rem;line-height:1.65;max-width:850px}
+.metric-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:9px;margin:0 0 12px}.metric{position:relative;overflow:hidden;background:var(--card);border:1px solid var(--line);border-radius:16px;min-height:88px;padding:12px 13px;box-shadow:var(--shadow)}.metric:before{content:"";position:absolute;right:0;top:0;width:4px;height:100%;background:var(--brand)}.metric.good:before{background:var(--good)}.metric.warn:before{background:var(--warn)}.metric.info:before{background:var(--info)}.metric.purple:before{background:var(--purple)}.metric .v{font-size:1.28rem;line-height:1.1;font-weight:900;color:var(--ink);letter-spacing:-.35px}.metric .l{font-size:.69rem;font-weight:900;color:#475467;margin-top:6px}.metric .small{font-size:.6rem;color:var(--muted);margin-top:1px}
+.section-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:12px 0 7px}.section-title{font-size:.97rem;font-weight:900;color:var(--ink);margin:0}.section-sub{font-size:.69rem;color:var(--muted);line-height:1.55;margin:1px 0 0}.small-note{font-size:.63rem;color:var(--muted)}
+.card,.soft-panel{background:#fff;border:1px solid var(--line);border-radius:17px;padding:12px 13px;box-shadow:var(--shadow)}.card + .card{margin-top:8px}.card-title{font-size:.84rem;font-weight:900;color:var(--ink);margin-bottom:3px}.card-muted{font-size:.68rem;color:var(--muted);line-height:1.7}
+.order-list{display:grid;gap:8px}.order-item{background:#fff;border:1px solid var(--line);border-radius:15px;padding:10px 11px;box-shadow:0 4px 13px rgba(16,24,40,.04)}.order-row{display:flex;align-items:center;justify-content:space-between;gap:9px}.order-main{min-width:0}.order-no{font-size:.78rem;font-weight:900;color:var(--ink)}.order-route{font-size:.64rem;color:#475467;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.order-meta{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+.status-pill,.status-active,.status-done,.status-cancel,.status-warn{display:inline-flex;align-items:center;gap:4px;padding:.22rem .58rem;border-radius:999px;font-size:.64rem;font-weight:900;white-space:nowrap}.status-pill{background:#f2f4f7;color:#344054}.status-active{background:#eff8ff;color:#175cd3}.status-done{background:#ecfdf3;color:#067647}.status-cancel{background:#fef3f2;color:#b42318}.status-warn{background:#fffaeb;color:#b54708}
+.map-shell{background:#fff;border:1px solid var(--line);border-radius:18px;padding:6px;box-shadow:var(--shadow);overflow:hidden}.field-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.field-actions .stButton>button{min-height:60px!important;font-size:.95rem!important;border-radius:15px!important}
+.stButton>button,.stDownloadButton>button,.stLinkButton>a{min-height:45px!important;border-radius:12px!important;border:1px solid var(--line)!important;font-weight:900!important;font-size:.8rem!important;box-shadow:none!important;transition:.12s!important}.stButton>button:hover,.stDownloadButton>button:hover,.stLinkButton>a:hover{transform:translateY(-1px);box-shadow:0 7px 16px rgba(16,24,40,.09)!important}
+.stTextInput input,.stNumberInput input,.stTextArea textarea,.stDateInput input{min-height:45px!important;border-radius:12px!important;border:1px solid #d9dee7!important;background:#fff!important;font-size:15px!important}[data-baseweb="select"]>div{min-height:45px!important;border-radius:12px!important;border-color:#d9dee7!important;background:#fff!important}label{font-size:.72rem!important;font-weight:800!important;color:#344054!important}
+[data-testid="stForm"]{border:1px solid var(--line)!important;border-radius:17px!important;padding:11px!important;background:#fff!important;box-shadow:var(--shadow)!important}[data-testid="stExpander"]{border:1px solid var(--line);border-radius:15px;background:#fff;overflow:hidden}.stAlert{border-radius:13px!important}[data-testid="stDataFrame"]{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:#fff}
+@media(max-width:1100px){.metric-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:700px){.block-container{padding:.4rem .48rem 5rem}.app-topbar{padding:8px 9px;border-radius:14px}.app-brand{font-size:.82rem}.app-brand-mark{width:31px;height:31px;border-radius:10px}.user-chip{font-size:.59rem;padding:5px 6px}.onway-hero{padding:14px 14px;border-radius:17px}.onway-hero h1{font-size:1.15rem}.onway-hero p{font-size:.66rem}.metric-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.metric{min-height:78px;padding:10px 11px;border-radius:14px}.metric .v{font-size:1.08rem}.metric .l{font-size:.62rem}.metric .small{font-size:.55rem}.section-title{font-size:.9rem}.section-sub{font-size:.64rem}.card{border-radius:14px;padding:10px}.stButton>button,.stDownloadButton>button,.stLinkButton>a{min-height:51px!important;font-size:.84rem!important}.stTextInput input,.stNumberInput input,.stTextArea textarea,[data-baseweb="select"]>div{min-height:50px!important;font-size:16px!important}.field-actions{grid-template-columns:1fr}.field-actions .stButton>button{min-height:62px!important;font-size:1rem!important}.order-no{font-size:.75rem}.order-route{font-size:.61rem}}
+@media(max-width:390px){.user-chip{max-width:45%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.metric .v{font-size:1rem}.metric-grid{gap:6px}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 """, unsafe_allow_html=True)
 
@@ -571,26 +578,6 @@ def notify_v3(kind, message):
         st.info(message)
 
 
-def metric_v3(items):
-    cols = st.columns(min(6, len(items)))
-    for i, item in enumerate(items):
-        label, value, accent = item
-        with cols[i % len(cols)]:
-            st.markdown(
-                f'<div class="metric"><div class="v">{value}</div><div class="l">{label}</div>'
-                f'<div class="small">{accent}</div></div>', unsafe_allow_html=True
-            )
-
-
-def badge_v3(text, kind='soft'):
-    classes = {'green':'status-done','red':'status-cancel','blue':'status-active','amber':'status-warn','soft':'status-pill'}
-    return f'<span class="{classes.get(kind, "status-pill")}">{text}</span>'
-
-
-def header_v3(title, subtitle=''):
-    st.markdown(f'<div class="onway-hero"><h1>{title}</h1><p>{subtitle}</p></div>', unsafe_allow_html=True)
-
-
 def set_active(entity, entity_id, active, actor):
     table_map = {'rider':'riders', 'restaurant':'restaurants', 'branch':'branches', 'user':'users'}
     table = table_map.get(entity)
@@ -795,14 +782,19 @@ def mount_map_v3(points=None, center=None, zoom=12, clickable=False, geolocation
 
 
 def header_v3(title, subtitle=''):
+    user=st.session_state.get('user',{})
+    today=datetime.now().strftime('%Y/%m/%d')
+    st.markdown(f'<div class="app-topbar"><div class="app-brand"><div class="app-brand-mark">🚚</div><div>{APP_NAME}</div></div><div class="user-chip"><span class="user-dot"></span>{user.get("name","مستخدم")} • {role_label(user.get("role",""))} • {today}</div></div>',unsafe_allow_html=True)
     st.markdown(f'<div class="onway-hero"><h1>{title}</h1><p>{subtitle}</p></div>',unsafe_allow_html=True)
 
 
 def metric_v3(items):
-    cols=st.columns(min(6,len(items)))
-    for i,(label,value,accent) in enumerate(items):
-        with cols[i%len(cols)]:
-            st.markdown(f'<div class="metric"><div class="v">{value}</div><div class="l">{label}</div><div class="small">{accent}</div></div>',unsafe_allow_html=True)
+    cards=[]
+    for label,value,accent in items:
+        low=(str(label)+' '+str(accent)).lower()
+        kind='good' if any(x in low for x in ('خزينة','تم التسليم','حديث','جاهز')) else 'warn' if any(x in low for x in ('مديون','قديم','متأخر')) else 'info' if any(x in low for x in ('طلبات','كاش','تحصيل')) else 'purple' if 'عمول' in low else ''
+        cards.append(f'<div class="metric {kind}"><div class="v">{value}</div><div class="l">{label}</div><div class="small">{accent}</div></div>')
+    st.markdown('<div class="metric-grid">'+''.join(cards)+'</div>',unsafe_allow_html=True)
 
 
 def badge_v3(text,kind='soft'):
