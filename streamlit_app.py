@@ -20,7 +20,7 @@ st.set_page_config(
     page_title=f"{APP_NAME} | غرفة العمليات",
     page_icon="🧡",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="collapsed",
 )
 
 # =========================================================
@@ -63,13 +63,31 @@ html,body,[class*="css"]{font-family:'Cairo',sans-serif!important;direction:rtl;
 .stButton>button,.stDownloadButton>button,.stLinkButton>a{min-height:46px!important;border-radius:var(--radius-btn)!important;border:1px solid var(--line)!important;font-weight:800!important;font-size:.82rem!important;box-shadow:none!important;transition:.15s!important}
 .stButton>button[kind="primary"]{background:var(--brand)!important;color:#fff!important;border-color:var(--brand)!important}.stButton>button:hover{transform:translateY(-1px);box-shadow:var(--shadow-hover)!important}
 .stTextInput input,.stNumberInput input,.stTextArea textarea,.stDateInput input{min-height:46px!important;border-radius:12px!important;border:1px solid #D9DEE7!important;background:#fff!important;font-size:15px!important}
-[data-baseweb="select"]>div{min-height:46px!important;border-radius:12px!important;border-color:#D9DEE7!important;background:#fff!important}label{font-size:.72rem!important;font-weight:800!important;color:#344054!important}
+[data-baseweb="select"]>div{min-height:46px!important;border-radius:12px!important;border-color:#D9DEE7!important;background:#fff!important;color:#1F2937!important}[data-baseweb="select"] *{color:#1F2937!important}label{font-size:.72rem!important;font-weight:800!important;color:#344054!important}
 [data-testid="stForm"]{border:1px solid var(--line)!important;border-radius:var(--radius)!important;padding:12px!important;background:#fff!important;box-shadow:var(--shadow)!important}
 [data-testid="stExpander"]{border:1px solid var(--line);border-radius:14px;background:#fff;overflow:hidden}.stAlert{border-radius:13px!important}[data-testid="stDataFrame"]{border:1px solid var(--line);border-radius:13px;overflow:hidden;background:#fff}
 .map-shell{border:1px solid var(--line);border-radius:18px;overflow:hidden;background:#fff;box-shadow:var(--shadow);padding:5px}
 .quick-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin-bottom:14px}.quick-card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px;text-align:center;box-shadow:var(--shadow);font-weight:900}
 .rider-action button{min-height:62px!important;font-size:1rem!important}
 .highlight{background:linear-gradient(135deg,#fff7f0,#fff);border:1px solid #FFD4BC;border-right:4px solid var(--brand);border-radius:14px;padding:12px}
+
+/* V6 usability overrides: stronger contrast + compact/collapsible navigation */
+[data-testid="stSidebar"]{background:#FFFFFF!important;color:#1F2937!important}
+[data-testid="stSidebar"] [data-testid="stMarkdownContainer"], [data-testid="stSidebar"] label, [data-testid="stSidebar"] p, [data-testid="stSidebar"] span{color:#1F2937!important}
+[data-testid="stSidebar"] button{color:#1F2937!important}
+[data-testid="stSidebar"] [role="radiogroup"] label{background:#fff!important;color:#1F2937!important;border:1px solid transparent!important}
+[data-testid="stSidebar"] [role="radiogroup"] label:hover{background:#FFF0E5!important;color:#FF5A00!important}
+[data-testid="stSidebar"] [role="radiogroup"] label:has(input:checked){background:#FFF0E5!important;color:#C74300!important;border-right:4px solid #FF5A00!important}
+.stButton>button,.stDownloadButton>button,.stLinkButton>a{color:#1F2937!important;background:#FFFFFF!important}
+.stButton>button[kind="primary"]{color:#FFFFFF!important;background:#FF5A00!important}
+.stButton>button:disabled{color:#98A2B3!important;background:#F2F4F7!important}
+[data-testid="stDataFrame"] *{color:#1F2937}
+.workspace-switch{background:#fff;border:1px solid #E5E7EB;border-radius:16px;padding:10px 12px;box-shadow:0 4px 12px rgba(0,0,0,.04);margin-bottom:12px}
+.workspace-label{font-size:.72rem;font-weight:900;color:#475467;margin-bottom:7px}
+.gps-panel{background:linear-gradient(135deg,#F0FFF7,#FFFFFF);border:1px solid #B7E6CC;border-radius:16px;padding:12px 14px;margin-bottom:12px}
+.gps-title{font-size:.92rem;font-weight:900;color:#067647}
+.gps-sub{font-size:.68rem;color:#475467;line-height:1.7}
+@media(max-width:700px){.workspace-switch{padding:9px}.workspace-label{font-size:.68rem}}
 @media(max-width:1100px){.metric-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.quick-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:700px){.block-container{padding:.4rem .48rem 5rem}.app-topbar{padding:8px 9px;border-radius:14px}.app-brand{font-size:.82rem}.app-brand-mark{width:34px;height:34px;border-radius:10px}.user-chip{font-size:.59rem;padding:5px 7px;max-width:48%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.onway-hero{padding:14px;border-radius:15px}.onway-hero h1{font-size:1.2rem}.onway-hero p{font-size:.68rem}.metric-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.metric{min-height:79px;padding:10px}.metric .v{font-size:1.05rem}.metric .l{font-size:.61rem}.metric .s{font-size:.53rem}.quick-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.stButton>button,.stDownloadButton>button,.stLinkButton>a{min-height:51px!important;font-size:.84rem!important}.stTextInput input,.stNumberInput input,.stTextArea textarea,[data-baseweb="select"]>div{min-height:50px!important;font-size:16px!important}.rider-action button{min-height:68px!important;font-size:1.02rem!important}.section-title{font-size:.91rem}.section-sub{font-size:.64rem}}
 </style>
@@ -599,12 +617,17 @@ MAP_COMPONENT=None
 try:
     from streamlit.components.v2 import component as _component
     MAP_HTML="""
-    <div id='owroot' style='height:100%;min-height:430px;position:relative;overflow:hidden;border-radius:16px;background:#e7edf2'><div id='owmap' style='position:absolute;inset:0'></div><div id='owmsg' style='display:none;position:absolute;top:12px;right:12px;z-index:1200;background:rgba(31,41,55,.94);color:#fff;border-radius:999px;padding:8px 12px;font:800 12px Cairo,Arial'></div></div>
+    <div id='owroot' style='height:100%;min-height:430px;position:relative;overflow:hidden;border-radius:16px;background:#e7edf2'>
+      <div id='owmap' style='position:absolute;inset:0'></div>
+      <div id='owmsg' style='display:none;position:absolute;top:12px;right:12px;z-index:1200;background:rgba(31,41,55,.96);color:#fff;border-radius:999px;padding:8px 12px;font:800 12px Cairo,Arial;max-width:calc(100% - 24px)'></div>
+      <button id='owgps' style='display:none;position:absolute;top:12px;left:12px;z-index:1200;background:#007AFF;color:#fff;border:0;border-radius:999px;padding:10px 14px;font:900 12px Cairo,Arial;box-shadow:0 4px 14px rgba(0,0,0,.18);cursor:pointer'>📍 تشغيل موقعي</button>
+      <div id='owgpsbadge' style='display:none;position:absolute;bottom:12px;right:12px;z-index:1200;background:#fff;color:#344054;border:1px solid #E5E7EB;border-radius:999px;padding:7px 10px;font:900 11px Cairo,Arial;box-shadow:0 4px 14px rgba(0,0,0,.12)'></div>
+    </div>
     """
     MAP_CSS="""
     @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800;900&display=swap');
     .leaflet-container{font-family:Cairo,Arial;background:#e7edf2}.leaflet-popup-content{direction:rtl;font-family:Cairo,Arial;font-size:12px;line-height:1.65}.leaflet-control{font-family:Cairo,Arial}
-    .owpin{display:flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;border:2px solid #fff;box-shadow:0 3px 12px rgba(0,0,0,.25);font-size:18px}
+    .owpin{display:flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;border:2px solid #fff;box-shadow:0 3px 12px rgba(0,0,0,.25);font-size:18px}.owgps-on{background:#00B368!important}.owgps-warn{background:#FFB020!important}
     """
     MAP_JS="""
     export default function(component){
@@ -705,24 +728,61 @@ try:
             }).catch(()=>{msg.style.display='none';setTriggerValue('map_click',JSON.stringify({lat,lng,address:''}));});
           });
         }
-        if(cfg.geolocation&&navigator.geolocation&&!mapEl.__owGeo){
-          mapEl.__owGeo=true;
-          mapEl.__owWatch=navigator.geolocation.watchPosition(pos=>{
-            const c=pos.coords, now=Date.now();
-            setTriggerValue('gps',JSON.stringify({lat:Number(c.latitude.toFixed(6)),lng:Number(c.longitude.toFixed(6)),accuracy:c.accuracy==null?null:Number(c.accuracy.toFixed(1)),heading:c.heading==null?null:Number(c.heading.toFixed(1)),speed:c.speed==null?null:Number((c.speed||0).toFixed(1)),ts:now}));
-          },e=>{msg.style.display='block';msg.textContent='🔴 GPS: '+e.message;},{enableHighAccuracy:true,maximumAge:3000,timeout:10000});
+        const gpsBtn=root.querySelector('#owgps');
+        const gpsBadge=root.querySelector('#owgpsbadge');
+        const setGpsBadge=(text,kind='normal')=>{ if(!gpsBadge) return; gpsBadge.style.display='block'; gpsBadge.textContent=text; gpsBadge.style.borderColor=kind==='ok'?'#B7E6CC':kind==='warn'?'#FFDFA3':'#E5E7EB'; gpsBadge.style.color=kind==='ok'?'#067647':kind==='warn'?'#B54708':'#344054'; };
+        const distanceM=(a,b)=>{
+          const R=6371000, p1=a[0]*Math.PI/180, p2=b[0]*Math.PI/180, dp=(b[0]-a[0])*Math.PI/180, dl=(b[1]-a[1])*Math.PI/180;
+          const x=Math.sin(dp/2)**2+Math.cos(p1)*Math.cos(p2)*Math.sin(dl/2)**2;
+          return 2*R*Math.asin(Math.sqrt(x));
+        };
+        const pushGps=(pos)=>{
+          const c=pos.coords, now=Date.now(), lat=Number(c.latitude.toFixed(6)), lng=Number(c.longitude.toFixed(6));
+          const last=mapEl.__owLastGpsSent;
+          if(last && now-last.ts<4000 && distanceM([last.lat,last.lng],[lat,lng])<15) return;
+          const payload={lat,lng,accuracy:c.accuracy==null?null:Number(c.accuracy.toFixed(1)),heading:c.heading==null?null:Number(c.heading.toFixed(1)),speed:c.speed==null?null:Number((c.speed||0).toFixed(1)),ts:now};
+          mapEl.__owLastGpsSent=payload;
+          setGpsBadge('🟢 GPS متصل • دقة '+(payload.accuracy??'—')+' م','ok');
+          if(gpsBtn){gpsBtn.classList.add('owgps-on');gpsBtn.textContent='🟢 GPS يعمل';}
+          setTriggerValue('gps',JSON.stringify(payload));
+        };
+        const gpsError=(e)=>{
+          let t='تعذر تحديد الموقع';
+          if(e&&e.code===1)t='تم رفض إذن الموقع. اسمح للموقع من إعدادات المتصفح.';
+          else if(e&&e.code===2)t='الموقع غير متاح حالياً. تأكد من تشغيل GPS.';
+          else if(e&&e.code===3)t='انتهت مهلة تحديد الموقع. أعد المحاولة.';
+          setGpsBadge('🟠 '+t,'warn');
+          if(gpsBtn){gpsBtn.classList.remove('owgps-on');gpsBtn.classList.add('owgps-warn');gpsBtn.textContent='📍 السماح بالموقع';}
+          setTriggerValue('gps_status',JSON.stringify({code:e?.code||0,message:t}));
+        };
+        const startGPS=()=>{
+          if(!navigator.geolocation){ gpsError({code:2}); return; }
+          if(gpsBtn){gpsBtn.classList.remove('owgps-warn');gpsBtn.textContent='⏳ جاري طلب الموقع…';}
+          setGpsBadge('⏳ بانتظار إذن الموقع…');
+          navigator.geolocation.getCurrentPosition(pushGps,gpsError,{enableHighAccuracy:true,maximumAge:3000,timeout:12000});
+          if(!mapEl.__owWatchStarted){
+            mapEl.__owWatchStarted=true;
+            mapEl.__owWatch=navigator.geolocation.watchPosition(pushGps,gpsError,{enableHighAccuracy:true,maximumAge:3000,timeout:15000});
+          }
+        };
+        if(cfg.geolocation){
+          if(gpsBtn){gpsBtn.style.display='block'; gpsBtn.onclick=startGPS;}
+          if(!mapEl.__owGeoSetup){
+            mapEl.__owGeoSetup=true;
+            if(cfg.auto_request_gps) setTimeout(startGPS,450);
+          }
         }
       })();
       return ()=>{};
     }
     """
-    MAP_COMPONENT=_component("onway_map_v5",html=MAP_HTML,css=MAP_CSS,js=MAP_JS,isolate_styles=True)
+    MAP_COMPONENT=_component("onway_map_v6",html=MAP_HTML,css=MAP_CSS,js=MAP_JS,isolate_styles=True)
 except Exception:
     MAP_COMPONENT=None
 
 
 def mount_map(points=None,center=None,zoom=12,clickable=False,geolocation=False,route=None,key="map"):
-    cfg={"points":points or [],"center":center or [31.2001,29.9187],"zoom":zoom,"clickable":clickable,"geolocation":geolocation,"route":route}
+    cfg={"points":points or [],"center":center or [31.2001,29.9187],"zoom":zoom,"clickable":clickable,"geolocation":geolocation,"auto_request_gps":bool(geolocation and key.startswith("live_map_RIDER")),"route":route}
     if MAP_COMPONENT:
         import base64
         payload=base64.b64encode(json.dumps(cfg,ensure_ascii=False).encode()).decode()
@@ -738,7 +798,7 @@ def geocode_address(query):
     if not query: return None
     try:
         url="https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&accept-language=ar&q="+quote(query+", Alexandria, Egypt")
-        req=Request(url,headers={"User-Agent":"ONWAY-Delivery/5.0 (operations app)"})
+        req=Request(url,headers={"User-Agent":"ONWAY-Delivery/6.0 (operations app)"})
         with urlopen(req,timeout=8) as r: data=json.loads(r.read().decode("utf-8"))
         if data:
             return {"lat":round(float(data[0]["lat"]),6),"lng":round(float(data[0]["lon"]),6),"address":data[0].get("display_name",query)}
@@ -748,11 +808,66 @@ def geocode_address(query):
 
 
 # =========================================================
+# وضع العمل — المالك يستطيع التبديل بين الاختصاصات بدون تسجيل خروج
+# =========================================================
+def effective_user():
+    base=st.session_state.get("user",{})
+    if not base: return base
+    if base.get("role")!="OWNER": return base
+    mode=st.session_state.get("workspace_role","OWNER")
+    out=dict(base); out["role"]=mode
+    if mode=="RIDER":
+        riders=df("SELECT id,name FROM riders WHERE status!='غير نشط' ORDER BY name")
+        selected=st.session_state.get("workspace_rider_id")
+        ids=riders["id"].tolist() if not riders.empty else []
+        if selected not in ids: selected=ids[0] if ids else None
+        st.session_state["workspace_rider_id"]=selected
+        out["ref_id"]=selected
+    elif mode=="RESTAURANT":
+        rests=active_restaurants()
+        selected=st.session_state.get("workspace_restaurant_id")
+        ids=rests["id"].tolist() if not rests.empty else []
+        if selected not in ids: selected=ids[0] if ids else None
+        st.session_state["workspace_restaurant_id"]=selected
+        out["ref_id"]=selected
+    else:
+        out["ref_id"]=base.get("ref_id")
+    return out
+
+def _on_workspace_rider_change():
+    selected=st.session_state.get("workspace_rider_select")
+    if selected is None: return
+    st.session_state["workspace_rider_id"]=selected
+
+def render_workspace_switcher(base_user):
+    if base_user.get("role")!="OWNER": return effective_user()
+    current=st.session_state.get("workspace_role","OWNER")
+    st.markdown('<div class="workspace-switch"><div class="workspace-label">🔄 مساحة العمل — التبديل بدون تسجيل خروج</div></div>',unsafe_allow_html=True)
+    roles=[("OWNER","👑 المالك"),("DISPATCHER","🎯 الديسباتشر"),("RIDER","🚴 الطيار"),("ACCOUNTANT","💰 الحسابات")]
+    cols=st.columns(4,gap="small")
+    for i,(code,label) in enumerate(roles):
+        if cols[i].button(label,type="primary" if current==code else "secondary",use_container_width=True,key=f"workspace_{code}"):
+            st.session_state["workspace_role"]=code
+            st.session_state.page="rider" if code=="RIDER" else "dashboard"
+            st.rerun()
+    if current=="RIDER":
+        riders=df("SELECT id,name FROM riders WHERE status!='غير نشط' ORDER BY name")
+        if riders.empty:
+            st.warning("لا يوجد طيارون نشطون لاختيار وضع الطيار.")
+        else:
+            ids=riders["id"].tolist(); names=riders["name"].tolist(); cur=st.session_state.get("workspace_rider_id",ids[0]); idx=ids.index(cur) if cur in ids else 0
+            st.selectbox("الطيار الذي ستفتح واجهته",names,index=idx,key="workspace_rider_select",on_change=_on_workspace_rider_change)
+    return effective_user()
+
+# =========================================================
 # واجهة الدخول
 # =========================================================
 def header(title,subtitle=""):
-    user=st.session_state.get("user",{})
-    st.markdown(f'<div class="app-topbar"><div class="app-brand"><div class="app-brand-mark">🧡</div><div>{APP_NAME}</div></div><div class="user-chip"><span class="user-dot"></span>{user.get("name","زائر")} • {role_label(user.get("role"))}</div></div><div class="onway-hero"><h1>{title}</h1><p>{subtitle}</p></div>',unsafe_allow_html=True)
+    user=effective_user() or {}
+    st.markdown(f'<div class="app-topbar"><div class="app-brand"><div class="app-brand-mark">🧡</div><div>{APP_NAME}</div></div><div class="user-chip"><span class="user-dot"></span>{user.get("name","زائر")} • {role_label(user.get("role"))}</div></div>',unsafe_allow_html=True)
+    if st.session_state.get("user",{}).get("role")=="OWNER":
+        render_workspace_switcher(st.session_state.user)
+    st.markdown(f'<div class="onway-hero"><h1>{title}</h1><p>{subtitle}</p></div>',unsafe_allow_html=True)
 
 
 def metric_grid(items):
@@ -784,7 +899,7 @@ def login():
         if st.form_submit_button("دخول آمن",type="primary",use_container_width=True):
             u=one("SELECT * FROM users WHERE lower(email)=? AND active=1",(e,))
             if u and verify_pin(p,u["pin_hash"]):
-                st.session_state.user={"id":u["id"],"name":u["name"],"email":u["email"],"role":u["role"],"ref_id":u["ref_id"]}; audit(u["id"],"login","user",u["id"]); st.rerun()
+                st.session_state.user={"id":u["id"],"name":u["name"],"email":u["email"],"role":u["role"],"ref_id":u["ref_id"]}; st.session_state["workspace_role"]="OWNER" if u["role"]=="OWNER" else u["role"]; audit(u["id"],"login","user",u["id"]); st.rerun()
             else: st.error("بيانات الدخول غير صحيحة.")
 
 
@@ -856,6 +971,13 @@ def live_map_fragment(user, navigation=False):
             except Exception: pass
         if rm:
             try: st.session_state.route_meta=json.loads(rm)
+            except Exception: pass
+        gps_status=getattr(result,"gps_status",None)
+        if gps_status:
+            try:
+                st.session_state.gps_status=json.loads(gps_status)
+                if st.session_state.gps_status.get("code")==1 and user.get("role")=="RIDER":
+                    st.warning("📍 إذن الموقع مرفوض. اسمح للموقع من إعدادات المتصفح ثم اضغط «السماح بالموقع». بدون الإذن لن تستطيع الإدارة رؤية موقعك.")
             except Exception: pass
 
 
@@ -1287,6 +1409,9 @@ def render_rider(user):
     if not r: st.error("حساب الطيار غير مرتبط بسجل صالح."); return
     header(f"🛵 {r['name']}","واجهة ميدانية: الطلب الحالي، الملاحة، GPS، والحضور — أقل عدد ممكن من الخطوات.")
     fresh=gps_fresh(r); metric_grid([("الحالة",r["status"],"الأسطول","info"),("طلبات نشطة",int(r["active_orders"]),"حالية","info"),("GPS","🟢 حديث" if fresh else "🟠 غير حديث","آخر تحديث","good" if fresh else "warn"),("المرتب الأساسي",f"{float(r['salary']):,.0f} ج","شهري","good")])
+    gps_state=st.session_state.get("gps_status") or {}
+    gps_hint="إذا كان الإذن مرفوضاً: من إعدادات المتصفح > أذونات الموقع > السماح لهذا الموقع، ثم أعد تحميل الصفحة." if gps_state.get("code")==1 else "اضغط «تشغيل موقعي» داخل الخريطة. أول مرة سيطلب المتصفح إذن الموقع."
+    st.markdown(f'<div class="gps-panel"><div class="gps-title">📍 تتبع الموقع</div><div class="gps-sub">{gps_hint}<br>تُرسل النقاط بعد تحقق من الدقة، وبمعدل ذكي لتقليل استهلاك البطارية والاتصال.</div></div>',unsafe_allow_html=True)
     st.markdown('<div class="section-title">🗺️ خريطتك</div>',unsafe_allow_html=True); live_map_fragment(user)
     my=df("SELECT o.*,rs.name restaurant,b.name branch FROM orders o JOIN restaurants rs ON rs.id=o.restaurant_id JOIN branches b ON b.id=o.branch_id WHERE o.rider_id=? AND o.status NOT IN ('تم التسليم','ملغى') ORDER BY o.created_at",(r["id"],))
     if my.empty:
@@ -1333,7 +1458,7 @@ def sidebar(user):
     current=st.session_state.get("page",menu[0][1]); current_label=next((x[0] for x in menu if x[1]==current),labels[0]); choice=st.sidebar.radio("القائمة",labels,index=labels.index(current_label)); st.session_state.page=dict(menu)[choice]
     st.sidebar.markdown("---")
     st.sidebar.caption(f"آخر تحديث للواجهة: {datetime.now().strftime('%H:%M:%S')}")
-    if st.sidebar.button("تسجيل الخروج",use_container_width=True): st.session_state.clear(); st.rerun()
+    if st.sidebar.button("تسجيل خروج كامل",use_container_width=True): st.session_state.clear(); st.rerun()
 
 
 # =========================================================
@@ -1344,7 +1469,8 @@ setup_db()
 if "user" not in st.session_state:
     login(); st.stop()
 
-user=st.session_state.user
+base_user=st.session_state.user
+user=effective_user()
 sidebar(user)
 page=st.session_state.get("page",nav_menu(user)[0][1])
 try:
