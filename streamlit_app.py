@@ -46,8 +46,9 @@ body{background:var(--bg)!important;color:var(--text)!important}
 [data-testid="stAppViewContainer"]{background:radial-gradient(circle at 15% 0%,rgba(255,90,0,.07),transparent 28%),linear-gradient(180deg,#080A0D 0%,#0A0D11 100%)!important}
 [data-testid="stHeader"]{background:rgba(8,10,13,.70)!important;backdrop-filter:blur(12px)}
 [data-testid="stDecoration"],#MainMenu,footer{display:none!important}
-.block-container{max-width:1500px;padding:.65rem .8rem 5rem}
-[data-testid="stSidebar"]{background:#0C0F13!important;border-left:1px solid var(--line)!important;box-shadow:var(--shadow)}
+.block-container{max-width:1500px;padding:.65rem .8rem 5rem;margin:0 auto}
+[data-testid="stSidebar"]{display:none!important;visibility:hidden!important;width:0!important;min-width:0!important;max-width:0!important;padding:0!important;margin:0!important}
+[data-testid="stSidebarCollapsedControl"]{display:none!important}
 [data-testid="stSidebar"] *{color:var(--soft)!important}
 [data-testid="stSidebar"] [role="radiogroup"] label{padding:.75rem .82rem!important;border-radius:12px!important;margin:.15rem 0!important;background:transparent!important;border:1px solid transparent!important;font-weight:800!important;font-size:.82rem!important}
 [data-testid="stSidebar"] [role="radiogroup"] label:hover{background:var(--brandSoft)!important;color:#FF9B68!important}
@@ -84,7 +85,7 @@ label{font-size:.71rem!important;font-weight:800!important;color:#CDD3DB!importa
 .rider-action button{min-height:66px!important;font-size:1rem!important;border-radius:16px!important}
 .quick-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:11px}.quick-card{background:#11151B;border:1px solid var(--line);border-radius:14px;padding:10px;text-align:center;font-weight:900;color:#fff;box-shadow:var(--shadow)}
 .cockpit-alert{padding:10px 12px;border-radius:13px;margin-bottom:7px;border:1px solid var(--line);background:#11151B}.cockpit-alert b{color:#fff}.cockpit-alert span{color:var(--muted);font-size:.66rem}
-@media(max-width:1100px){.metric-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.quick-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:1100px){.metric-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.quick-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}.top-nav-panel{background:rgba(15,18,23,.94);border:1px solid var(--line);border-radius:15px;padding:8px 9px;margin-bottom:10px;box-shadow:var(--shadow);backdrop-filter:blur(12px)}.top-nav-label{font-size:.62rem;font-weight:900;color:#8f9aa8;margin:0 0 6px}.top-nav-panel+div [data-testid="stButton"]>button{min-height:44px!important;font-size:.70rem!important;border-radius:12px!important}.top-nav-panel~div [data-testid="stSelectbox"]{margin-top:5px!important}
 @media(max-width:700px){.block-container{padding:.35rem .42rem 4.8rem}.app-topbar{padding:8px;border-radius:14px}.app-brand{font-size:.79rem}.app-brand-mark{width:34px;height:34px;border-radius:10px;font-size:1rem}.user-chip{font-size:.58rem;padding:5px 7px;max-width:47%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.onway-hero{padding:13px;border-radius:14px}.onway-hero h1{font-size:1.12rem}.onway-hero p{font-size:.64rem}.metric-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.metric{min-height:76px;padding:9px}.metric .v{font-size:1.02rem}.metric .l{font-size:.59rem}.metric .s{font-size:.50rem}.quick-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.stButton>button,.stDownloadButton>button,.stLinkButton>a{min-height:50px!important;font-size:.78rem!important}.stTextInput input,.stNumberInput input,.stTextArea textarea,[data-baseweb="select"]>div{min-height:51px!important;font-size:16px!important}.rider-action button{min-height:70px!important;font-size:1rem!important}.card,.panel{padding:11px;border-radius:15px}.section-title{font-size:.87rem}}
 </style>
 """, unsafe_allow_html=True)
@@ -607,184 +608,121 @@ def cash_receipts_today():
 
 
 # =========================================================
-# GPS / Map component
+# =========================================================
+# خريطة ONWAY التشغيلية — مبنية على خريطة Netlify الأصلية مع دمجها داخل التطبيق
 # =========================================================
 MAP_COMPONENT=None
 try:
     from streamlit.components.v2 import component as _component
+
     MAP_HTML="""
-    <div id='owroot' style='height:100%;min-height:430px;position:relative;overflow:hidden;border-radius:16px;background:#e7edf2'>
-      <div id='owmap' style='position:absolute;inset:0'></div>
-      <div id='owmsg' style='display:none;position:absolute;top:12px;right:12px;z-index:1200;background:rgba(31,41,55,.96);color:#fff;border-radius:999px;padding:8px 12px;font:800 12px Cairo,Arial;max-width:calc(100% - 24px)'></div>
-      <button id='owgps' style='display:none;position:absolute;top:12px;left:12px;z-index:1200;background:#007AFF;color:#fff;border:0;border-radius:999px;padding:10px 14px;font:900 12px Cairo,Arial;box-shadow:0 4px 14px rgba(0,0,0,.18);cursor:pointer'>📍 تشغيل موقعي</button>
-      <div id='owgpsbadge' style='display:none;position:absolute;bottom:12px;right:12px;z-index:1200;background:#fff;color:#344054;border:1px solid #E5E7EB;border-radius:999px;padding:7px 10px;font:900 11px Cairo,Arial;box-shadow:0 4px 14px rgba(0,0,0,.12)'></div>
+    <div id='owroot' dir='rtl'>
+      <div class='ow-search'>
+        <input id='owsearch' autocomplete='off' placeholder='ابحث عن شارع، مطعم، منطقة أو وجهة…' />
+        <button id='owmic' title='بحث صوتي'>🎤</button>
+        <button id='owsearchbtn'>بحث</button>
+      </div>
+      <div id='owhint'>انقر على الخريطة لتحديد الوجهة أو اضغط «GPS» لمعرفة موقع الجهاز.</div>
+      <div id='owmap'></div>
+      <div id='owstatus'></div>
+      <button id='owgps'>📍 GPS</button>
+      <div id='owcontrols'>
+        <button id='owshare' title='مشاركة الوجهة'>🔗</button>
+        <button id='owfit' title='ملاءمة العناصر'>⌖</button>
+        <button id='owfull' title='شاشة كاملة'>⛶</button>
+      </div>
+      <div id='owbadge'></div>
     </div>
     """
     MAP_CSS="""
-    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800;900&display=swap');
-    .leaflet-container{font-family:Cairo,Arial;background:#e7edf2}.leaflet-popup-content{direction:rtl;font-family:Cairo,Arial;font-size:12px;line-height:1.65}.leaflet-control{font-family:Cairo,Arial}
-    .owpin{display:flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;border:2px solid #fff;box-shadow:0 3px 12px rgba(0,0,0,.25);font-size:18px}.owgps-on{background:#00B368!important}.owgps-warn{background:#FFB020!important}
+    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@500;600;700;800;900&display=swap');
+    *{box-sizing:border-box}#owroot{height:100%;min-height:470px;position:relative;overflow:hidden;border-radius:18px;background:#101318;font-family:Cairo,Arial,sans-serif}
+    #owmap{position:absolute;inset:0}.leaflet-container{font-family:Cairo,Arial,sans-serif;background:#dfe5ea}.leaflet-popup-content{direction:rtl;line-height:1.7;font-size:12px}.leaflet-control{font-family:Cairo,Arial,sans-serif}
+    .ow-search{position:absolute;top:12px;left:50%;transform:translateX(-50%);z-index:1200;display:flex;gap:6px;width:min(94%,560px);padding:7px;background:rgba(18,18,18,.94);border:1px solid #3a414d;border-radius:999px;box-shadow:0 8px 28px rgba(0,0,0,.28);backdrop-filter:blur(10px)}
+    .ow-search input{flex:1;min-width:0;border:0;outline:0;background:transparent;color:#fff;font:700 13px Cairo,Arial;padding:7px 10px}.ow-search input::placeholder{color:#8b96a5}.ow-search button,.ow-search+button{border:0;color:#fff;background:#252b34;border-radius:999px;padding:8px 11px;font:800 12px Cairo;cursor:pointer}.ow-search #owsearchbtn{background:#FF5A00}.ow-search #owmic{background:#00B368}
+    #owhint{position:absolute;top:72px;right:50%;transform:translateX(50%);z-index:1150;background:rgba(16,19,24,.82);border:1px solid rgba(255,255,255,.08);color:#ffd18b;padding:5px 10px;border-radius:999px;font:700 10px Cairo;pointer-events:none;white-space:nowrap;max-width:92%;overflow:hidden;text-overflow:ellipsis}
+    #owstatus{display:none;position:absolute;top:108px;right:50%;transform:translateX(50%);z-index:1250;background:rgba(16,19,24,.96);color:#fff;padding:7px 12px;border-radius:999px;font:800 11px Cairo;box-shadow:0 6px 18px rgba(0,0,0,.25)}
+    #owgps{display:none;position:absolute;top:12px;right:12px;z-index:1250;border:1px solid #2d3744;background:#007AFF;color:#fff;border-radius:999px;padding:9px 13px;font:900 11px Cairo;box-shadow:0 6px 16px rgba(0,0,0,.24);cursor:pointer}#owgps.on{background:#00B368}#owgps.warn{background:#FFB020;color:#161616}
+    #owcontrols{position:absolute;bottom:16px;left:16px;z-index:1200;display:flex;gap:7px}#owcontrols button{width:42px;height:42px;border:1px solid #3a414d;background:rgba(18,18,18,.92);color:#fff;border-radius:13px;font-size:17px;cursor:pointer;box-shadow:0 5px 16px rgba(0,0,0,.24)}
+    #owbadge{display:none;position:absolute;bottom:16px;right:16px;z-index:1200;background:rgba(18,18,18,.92);color:#dbe1e8;border:1px solid #3a414d;padding:8px 10px;border-radius:999px;font:800 10px Cairo;box-shadow:0 5px 16px rgba(0,0,0,.24)}
+    .owpin{display:flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;border:2px solid #fff;box-shadow:0 4px 14px rgba(0,0,0,.25);font-size:17px}.owpin.rider{box-shadow:0 0 0 5px rgba(0,194,122,.12),0 4px 14px rgba(0,0,0,.25)}
+    @media(max-width:650px){#owroot{min-height:58vh}.ow-search{width:95%;top:9px}.ow-search input{font-size:14px}.ow-search button{padding:8px 10px}.owhint{display:none}#owhint{top:66px;font-size:9px}.leaflet-control-zoom{margin-bottom:72px!important}.leaflet-bottom.leaflet-left{bottom:7px}}
     """
     MAP_JS="""
     export default function(component){
       const {data,setTriggerValue,parentElement}=component;
-      const root=parentElement, mapEl=root.querySelector('#owmap'), msg=root.querySelector('#owmsg');
-      let cfg={};
-      try{cfg=JSON.parse(atob(data));}catch(e){return;}
-      const load=(src)=>new Promise((resolve,reject)=>{
-        if(window.L){resolve();return;}
-        const s=document.createElement('script');s.src=src;s.onload=resolve;s.onerror=reject;document.head.appendChild(s);
-      });
-      const esc=(v)=>String(v??'').replace(/[<>&"']/g,ch=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'}[ch]));
-      const routeKey=cfg.route?.from&&cfg.route?.to ? JSON.stringify([cfg.route.from,cfg.route.to]) : '';
+      const root=parentElement; if(!root) return;
+      const mapEl=root.querySelector('#owmap'), searchEl=root.querySelector('#owsearch'), searchBtn=root.querySelector('#owsearchbtn'), micBtn=root.querySelector('#owmic'), gpsBtn=root.querySelector('#owgps'), statusEl=root.querySelector('#owstatus'), badge=root.querySelector('#owbadge'), hint=root.querySelector('#owhint');
+      let cfg={}; try{cfg=JSON.parse(atob(data));}catch(e){return;}
+      const esc=v=>String(v??'').replace(/[<>&"']/g,ch=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'}[ch]));
+      const showStatus=t=>{statusEl.textContent=t;statusEl.style.display='block';clearTimeout(root.__owST);root.__owST=setTimeout(()=>statusEl.style.display='none',2600)};
+      const setBadge=(t,kind='normal')=>{badge.style.display='block';badge.textContent=t;badge.style.borderColor=kind==='ok'?'#2a614e':kind==='warn'?'#6b541e':'#3a414d';badge.style.color=kind==='ok'?'#8df0c8':kind==='warn'?'#ffd36e':'#dbe1e8'};
+      const loadCss=()=>{if(document.getElementById('ow-leaflet-css'))return;const l=document.createElement('link');l.id='ow-leaflet-css';l.rel='stylesheet';l.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';document.head.appendChild(l)};
+      const loadJs=src=>new Promise((resolve,reject)=>{if(window.L){resolve();return;}const s=document.createElement('script');s.src=src;s.onload=resolve;s.onerror=reject;document.head.appendChild(s)});
+      const routeKey=cfg.route?.from&&cfg.route?.to?JSON.stringify([cfg.route.from,cfg.route.to]):'';
+      const distanceM=(a,b)=>{const R=6371000,p1=a[0]*Math.PI/180,p2=b[0]*Math.PI/180,dp=(b[0]-a[0])*Math.PI/180,dl=(b[1]-a[1])*Math.PI/180;const x=Math.sin(dp/2)**2+Math.cos(p1)*Math.cos(p2)*Math.sin(dl/2)**2;return 2*R*Math.asin(Math.sqrt(x));};
       (async()=>{
-        try{await load('https://unpkg.com/leaflet@1.9.4/dist/leaflet.js');}
-        catch(e){msg.style.display='block';msg.textContent='تعذر تحميل الخريطة';return;}
-
+        loadCss();
+        try{await loadJs('https://unpkg.com/leaflet@1.9.4/dist/leaflet.js')}catch(e){showStatus('تعذر تحميل مكتبة الخريطة');return;}
         let map=mapEl.__owMap;
         if(!map){
           const center=cfg.center||[31.2001,29.9187];
-          map=L.map(mapEl,{zoomControl:false,preferCanvas:true}).setView(center,cfg.zoom||12);
-          mapEl.__owMap=map;
-          mapEl.__owLayer=L.layerGroup().addTo(map);
-          mapEl.__owRoute=L.layerGroup().addTo(map);
-          mapEl.__owCenter=JSON.stringify(center);
-          mapEl.__owClickable=false;
-          mapEl.__owGeo=false;
-          mapEl.__owWatch=null;
-          mapEl.__owRouteKey='';
+          map=L.map(mapEl,{zoomControl:false,preferCanvas:true}).setView(center,cfg.zoom||12); mapEl.__owMap=map; mapEl.__owLayer=L.layerGroup().addTo(map); mapEl.__owRoute=L.layerGroup().addTo(map); mapEl.__owMe=L.layerGroup().addTo(map); mapEl.__owWatch=null; mapEl.__owGps=false; mapEl.__owClickable=false; mapEl.__owInitialFit=false; mapEl.__owRouteFitted=false; mapEl.__owLastGps=null;
           L.control.zoom({position:'bottomleft'}).addTo(map);
-          L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{maxZoom:20,attribution:'© OpenStreetMap contributors © CARTO',subdomains:'abcd'}).addTo(map);
-        } else {
-          const centerKey=JSON.stringify(cfg.center||[31.2001,29.9187]);
-          if(centerKey!==mapEl.__owCenter){
-            map.setView(cfg.center||[31.2001,29.9187],cfg.zoom||12);
-            mapEl.__owCenter=centerKey;
-          }
-        }
-
+          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,detectRetina:true,attribution:'© OpenStreetMap contributors • ONWAY'}).addTo(map);
+        } else {const centerKey=JSON.stringify(cfg.center||[31.2001,29.9187]);if(centerKey!==mapEl.__owCenter){map.setView(cfg.center||[31.2001,29.9187],cfg.zoom||12);mapEl.__owCenter=centerKey;}}
         mapEl.__owLayer.clearLayers();
         const bounds=[];
-        (cfg.points||[]).forEach(p=>{
-          if(p.lat==null||p.lng==null)return;
-          const color=p.kind==='rider'?(p.online?'#00B368':'#9CA3AF'):p.kind==='branch'?'#FF5A00':p.kind==='self'?'#007AFF':'#FF3B30';
-          const icon=L.divIcon({className:'',html:`<div class='owpin' style='background:${color}'>${esc(p.icon||'📍')}</div>`,iconSize:[34,34],iconAnchor:[17,17]});
-          const m=L.marker([p.lat,p.lng],{icon}).addTo(mapEl.__owLayer);
-          let html=`<b>${esc(p.title||'')}</b>`;
-          if(p.meta)html+=`<br>${esc(p.meta)}`;
-          if(p.kind==='rider'&&p.accuracy!=null)html+=`<br>دقة GPS: ${esc(p.accuracy)} م`;
-          m.bindPopup(html);
-          m.on('click',()=>setTriggerValue('marker_click',JSON.stringify({id:p.id,kind:p.kind})));
-          bounds.push([p.lat,p.lng]);
-        });
-
+        (cfg.points||[]).forEach(p=>{if(p.lat==null||p.lng==null)return;const color=p.kind==='rider'?(p.online?'#00B368':'#7F8A97'):p.kind==='self'?'#007AFF':p.kind==='branch'?'#FF5A00':'#FF4D4D';const cl=p.kind==='rider'?'owpin rider':'owpin';const icon=L.divIcon({className:'',html:`<div class='${cl}' style='background:${color}'>${esc(p.icon||'📍')}</div>`,iconSize:[34,34],iconAnchor:[17,17]});const m=L.marker([p.lat,p.lng],{icon}).addTo(mapEl.__owLayer);let html=`<b>${esc(p.title||'')}</b>`;if(p.meta)html+=`<br>${esc(p.meta)}`;if(p.kind==='rider'&&p.accuracy!=null)html+=`<br>دقة GPS: ${esc(Number(p.accuracy).toFixed(1))} م`;m.bindPopup(`<div style='direction:rtl;font-family:Cairo,Arial;min-width:160px'>${html}</div>`);m.on('click',()=>setTriggerValue('marker_click',JSON.stringify({id:p.id,kind:p.kind})));bounds.push([p.lat,p.lng])});
+        const drawRoute=(coords,meta)=>{mapEl.__owRoute.clearLayers();L.polyline(coords,{color:'#FF5A00',weight:6,opacity:.88,lineCap:'round',lineJoin:'round'}).addTo(mapEl.__owRoute);setTriggerValue('route_meta',JSON.stringify(meta||{}));if(!mapEl.__owRouteFitted||mapEl.__owRouteKey!==routeKey){map.fitBounds(coords,{padding:[40,40],maxZoom:16});mapEl.__owRouteFitted=true;}};
+        window.__owRC=window.__owRC||{};window.__owRM=window.__owRM||{};
         if(routeKey){
-          mapEl.__owRoute.clearLayers();
-          const drawRoute=(coords)=>{
-            L.polyline(coords,{color:'#FF5A00',weight:6,opacity:.9,lineCap:'round'}).addTo(mapEl.__owRoute);
-            const sw=coords.map(x=>[x[0],x[1]]);
-            setTriggerValue('route_meta',JSON.stringify({distance_m:window.__owRouteMeta?.[routeKey]?.distance_m||null,duration_s:window.__owRouteMeta?.[routeKey]?.duration_s||null}));
-            if(!mapEl.__owRouteFitted || mapEl.__owRouteKey!==routeKey){
-              map.fitBounds(sw,{padding:[30,30],maxZoom:16});
-              mapEl.__owRouteFitted=true;
-            }
-          };
-          window.__owRouteCache=window.__owRouteCache||{};
-          window.__owRouteMeta=window.__owRouteMeta||{};
-          if(window.__owRouteCache[routeKey]){
-            drawRoute(window.__owRouteCache[routeKey]);
-          }else{
-            const f=cfg.route.from,t=cfg.route.to;
-            const url=`https://router.project-osrm.org/route/v1/driving/${f[1]},${f[0]};${t[1]},${t[0]}?overview=full&geometries=geojson`;
-            fetch(url).then(r=>r.json()).then(d=>{
-              if(d.routes&&d.routes[0]){
-                const rt=d.routes[0],coords=rt.geometry.coordinates.map(x=>[x[1],x[0]]);
-                window.__owRouteCache[routeKey]=coords;
-                window.__owRouteMeta[routeKey]={distance_m:rt.distance,duration_s:rt.duration};
-                drawRoute(coords);
-              }
-            }).catch(()=>{});
-          }
+          const from=cfg.route.from,to=cfg.route.to;
+          if(window.__owRC[routeKey]) drawRoute(window.__owRC[routeKey],window.__owRM[routeKey]); else {const url=`https://router.project-osrm.org/route/v1/driving/${from[1]},${from[0]};${to[1]},${to[0]}?overview=full&geometries=geojson`;fetch(url).then(r=>r.json()).then(d=>{if(d.routes&&d.routes[0]){const rt=d.routes[0],coords=rt.geometry.coordinates.map(c=>[c[1],c[0]]),meta={distance_m:rt.distance,duration_s:rt.duration};window.__owRC[routeKey]=coords;window.__owRM[routeKey]=meta;drawRoute(coords,meta)}}).catch(()=>showStatus('تعذر حساب خط السير الآن'));}
           mapEl.__owRouteKey=routeKey;
-        } else {
-          mapEl.__owRoute.clearLayers();
-          mapEl.__owRouteKey='';
-          if(bounds.length && !mapEl.__owInitialFit){map.fitBounds(bounds,{padding:[30,30],maxZoom:15});mapEl.__owInitialFit=true;}
-        }
-
+        }else{mapEl.__owRoute.clearLayers();mapEl.__owRouteKey='';mapEl.__owRouteFitted=false;if(bounds.length&&!mapEl.__owInitialFit){map.fitBounds(bounds,{padding:[35,35],maxZoom:15});mapEl.__owInitialFit=true}}
         if(cfg.clickable&&!mapEl.__owClickable){
           mapEl.__owClickable=true;
-          map.on('click',e=>{
-            const lat=Number(e.latlng.lat.toFixed(6)),lng=Number(e.latlng.lng.toFixed(6));
-            msg.style.display='block';msg.textContent='جاري تحديد العنوان…';
-            fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=18&accept-language=ar`).then(r=>r.json()).then(d=>{
-              msg.style.display='none';const address=d.display_name||'موقع محدد';
-              L.marker([lat,lng]).addTo(mapEl.__owLayer).bindPopup(`<b>📍 الوجهة المختارة</b><br>${esc(address)}`).openPopup();
-              setTriggerValue('map_click',JSON.stringify({lat,lng,address}));
-            }).catch(()=>{msg.style.display='none';setTriggerValue('map_click',JSON.stringify({lat,lng,address:''}));});
-          });
+          map.on('click',e=>{const lat=Number(e.latlng.lat.toFixed(6)),lng=Number(e.latlng.lng.toFixed(6));showStatus('جاري تحديد العنوان…');fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=18&accept-language=ar`).then(r=>r.json()).then(d=>{const address=d.display_name||'موقع محدد';setTriggerValue('map_click',JSON.stringify({lat,lng,address}));showStatus('تم تحديد الوجهة');}).catch(()=>{setTriggerValue('map_click',JSON.stringify({lat,lng,address:''}));showStatus('تم تحديد النقطة')})});
         }
-        const gpsBtn=root.querySelector('#owgps');
-        const gpsBadge=root.querySelector('#owgpsbadge');
-        const setGpsBadge=(text,kind='normal')=>{ if(!gpsBadge) return; gpsBadge.style.display='block'; gpsBadge.textContent=text; gpsBadge.style.borderColor=kind==='ok'?'#B7E6CC':kind==='warn'?'#FFDFA3':'#E5E7EB'; gpsBadge.style.color=kind==='ok'?'#067647':kind==='warn'?'#B54708':'#344054'; };
-        const distanceM=(a,b)=>{
-          const R=6371000, p1=a[0]*Math.PI/180, p2=b[0]*Math.PI/180, dp=(b[0]-a[0])*Math.PI/180, dl=(b[1]-a[1])*Math.PI/180;
-          const x=Math.sin(dp/2)**2+Math.cos(p1)*Math.cos(p2)*Math.sin(dl/2)**2;
-          return 2*R*Math.asin(Math.sqrt(x));
+        const geolocate=()=>{
+          if(!navigator.geolocation){setBadge('🟠 GPS غير متاح','warn');return;}
+          gpsBtn.classList.remove('warn');gpsBtn.textContent='⏳ جاري GPS…';setBadge('⏳ طلب إذن الموقع…');
+          const push=pos=>{const c=pos.coords,now=Date.now(),lat=Number(c.latitude.toFixed(6)),lng=Number(c.longitude.toFixed(6));const p={lat,lng,accuracy:c.accuracy==null?null:Number(c.accuracy.toFixed(1)),heading:c.heading==null?null:Number(c.heading.toFixed(1)),speed:c.speed==null?null:Number((c.speed||0).toFixed(1)),ts:now};const last=mapEl.__owLastGps; if(last&&now-last.ts<4500&&distanceM([last.lat,last.lng],[lat,lng])<12)return;mapEl.__owLastGps=p;setTriggerValue('gps',JSON.stringify(p));gpsBtn.classList.add('on');gpsBtn.textContent='🟢 GPS';setBadge(`🟢 دقة ${p.accuracy==null?'—':p.accuracy+' م'}`,'ok');mapEl.__owMe.clearLayers();const ic=L.divIcon({className:'',html:`<div class='owpin' style='background:#007AFF'>🚴</div>`,iconSize:[34,34],iconAnchor:[17,17]});L.marker([lat,lng],{icon:ic}).addTo(mapEl.__owMe).bindPopup('📍 موقعي الآن');};
+          const fail=e=>{let t='تعذر تحديد الموقع';if(e?.code===1)t='تم رفض إذن الموقع';if(e?.code===2)t='الموقع غير متاح';if(e?.code===3)t='انتهت مهلة GPS';gpsBtn.classList.remove('on');gpsBtn.classList.add('warn');gpsBtn.textContent='📍 السماح بالموقع';setBadge('🟠 '+t,'warn');setTriggerValue('gps_status',JSON.stringify({code:e?.code||0,message:t}))};
+          navigator.geolocation.getCurrentPosition(push,fail,{enableHighAccuracy:true,maximumAge:3000,timeout:12000});
+          if(!mapEl.__owWatch){mapEl.__owWatch=navigator.geolocation.watchPosition(push,fail,{enableHighAccuracy:true,maximumAge:3000,timeout:15000})}
         };
-        const pushGps=(pos)=>{
-          const c=pos.coords, now=Date.now(), lat=Number(c.latitude.toFixed(6)), lng=Number(c.longitude.toFixed(6));
-          const last=mapEl.__owLastGpsSent;
-          if(last && now-last.ts<4000 && distanceM([last.lat,last.lng],[lat,lng])<15) return;
-          const payload={lat,lng,accuracy:c.accuracy==null?null:Number(c.accuracy.toFixed(1)),heading:c.heading==null?null:Number(c.heading.toFixed(1)),speed:c.speed==null?null:Number((c.speed||0).toFixed(1)),ts:now};
-          mapEl.__owLastGpsSent=payload;
-          setGpsBadge('🟢 GPS متصل • دقة '+(payload.accuracy??'—')+' م','ok');
-          if(gpsBtn){gpsBtn.classList.add('owgps-on');gpsBtn.textContent='🟢 GPS يعمل';}
-          setTriggerValue('gps',JSON.stringify(payload));
-        };
-        const gpsError=(e)=>{
-          let t='تعذر تحديد الموقع';
-          if(e&&e.code===1)t='تم رفض إذن الموقع. اسمح للموقع من إعدادات المتصفح.';
-          else if(e&&e.code===2)t='الموقع غير متاح حالياً. تأكد من تشغيل GPS.';
-          else if(e&&e.code===3)t='انتهت مهلة تحديد الموقع. أعد المحاولة.';
-          setGpsBadge('🟠 '+t,'warn');
-          if(gpsBtn){gpsBtn.classList.remove('owgps-on');gpsBtn.classList.add('owgps-warn');gpsBtn.textContent='📍 السماح بالموقع';}
-          setTriggerValue('gps_status',JSON.stringify({code:e?.code||0,message:t}));
-        };
-        const startGPS=()=>{
-          if(!navigator.geolocation){ gpsError({code:2}); return; }
-          if(gpsBtn){gpsBtn.classList.remove('owgps-warn');gpsBtn.textContent='⏳ جاري طلب الموقع…';}
-          setGpsBadge('⏳ بانتظار إذن الموقع…');
-          navigator.geolocation.getCurrentPosition(pushGps,gpsError,{enableHighAccuracy:true,maximumAge:3000,timeout:12000});
-          if(!mapEl.__owWatchStarted){
-            mapEl.__owWatchStarted=true;
-            mapEl.__owWatch=navigator.geolocation.watchPosition(pushGps,gpsError,{enableHighAccuracy:true,maximumAge:3000,timeout:15000});
-          }
-        };
-        if(cfg.geolocation){
-          if(gpsBtn){gpsBtn.style.display='block'; gpsBtn.onclick=startGPS;}
-          if(!mapEl.__owGeoSetup){
-            mapEl.__owGeoSetup=true;
-            if(cfg.auto_request_gps) setTimeout(startGPS,450);
-          }
+        if(cfg.geolocation){gpsBtn.style.display='block';gpsBtn.onclick=geolocate;if(cfg.auto_request_gps&&!mapEl.__owAutoRequested){mapEl.__owAutoRequested=true;setTimeout(geolocate,500)}}
+        const doSearch=()=>{const q=(searchEl.value||'').trim();if(!q)return;showStatus('جاري البحث…');const url=`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&accept-language=ar&q=${encodeURIComponent(q+', Alexandria, Egypt')}`;fetch(url).then(r=>r.json()).then(d=>{if(!d||!d.length){showStatus('لم يتم العثور على المكان');return}const lat=Number(d[0].lat),lng=Number(d[0].lon),address=d[0].display_name||q;setTriggerValue('search_result',JSON.stringify({lat,lng,address,q}));showStatus('تم العثور على المكان ✅');}).catch(()=>showStatus('خطأ في الاتصال'))};
+        searchBtn.onclick=doSearch;searchEl.onkeydown=e=>{if(e.key==='Enter')doSearch()};
+        if(micBtn){micBtn.onclick=()=>{const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){showStatus('البحث الصوتي غير مدعوم في المتصفح');return}const r=new SR();r.lang='ar-EG';r.interimResults=false;r.maxAlternatives=1;r.onstart=()=>showStatus('تحدث الآن…');r.onresult=e=>{searchEl.value=e.results[0][0].transcript;doSearch()};r.onerror=()=>showStatus('تعذر قراءة الصوت');r.start();}}
+        const findAndShowTarget=p=>{if(p?.lat==null)return;const lat=Number(p.lat),lng=Number(p.lng);map.setView([lat,lng],17);L.marker([lat,lng]).addTo(mapEl.__owLayer).bindPopup(`<div style='direction:rtl;font-family:Cairo'><b>📍 ${esc(p.title||'الوجهة')}</b><br>${esc(p.address||'')}</div>`).openPopup();if(p.from){const from=p.from,to=[lat,lng],rk=JSON.stringify([from,to]);const url=`https://router.project-osrm.org/route/v1/driving/${from[1]},${from[0]};${to[1]},${to[0]}?overview=full&geometries=geojson`;fetch(url).then(r=>r.json()).then(d=>{if(d.routes&&d.routes[0]){const rt=d.routes[0],coords=rt.geometry.coordinates.map(c=>[c[1],c[0]]);L.polyline(coords,{color:'#FF5A00',weight:6,opacity:.9}).addTo(mapEl.__owRoute);setTriggerValue('route_meta',JSON.stringify({distance_m:rt.distance,duration_s:rt.duration,key:rk}))}})}};
+        if(cfg.search_result)findAndShowTarget(cfg.search_result);
+        if(cfg.selected&&cfg.selected.lat!=null){
+          const selectedKey=JSON.stringify([cfg.selected.lat,cfg.selected.lng,cfg.selected.title||'']);
+          if(mapEl.__owSelectedKey!==selectedKey){ mapEl.__owSelectedKey=selectedKey; map.setView([cfg.selected.lat,cfg.selected.lng],Math.max(16,cfg.zoom||12)); }
         }
+        root.querySelector('#owshare').onclick=()=>{const s=cfg.selected||cfg.route?.to;if(!s){showStatus('حدد وجهة أولاً');return}const lat=s.lat??s[0],lng=s.lng??s[1],url=`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;if(navigator.share)navigator.share({title:'ONWAY',text:'وجهة ONWAY',url}).catch(()=>{});else navigator.clipboard?.writeText(url).then(()=>showStatus('تم نسخ رابط الملاحة'))};
+        root.querySelector('#owfit').onclick=()=>{if(bounds.length)map.fitBounds(bounds,{padding:[35,35],maxZoom:15});else map.setView(cfg.center||[31.2001,29.9187],cfg.zoom||12)};
+        root.querySelector('#owfull').onclick=()=>{if(!document.fullscreenElement)root.requestFullscreen?.().catch(()=>{});else document.exitFullscreen?.()};
       })();
       return ()=>{};
     }
     """
-    MAP_COMPONENT=_component("onway_map_v6",html=MAP_HTML,css=MAP_CSS,js=MAP_JS,isolate_styles=True)
+    MAP_COMPONENT=_component("onway_operational_map_v8",html=MAP_HTML,css=MAP_CSS,js=MAP_JS,isolate_styles=True)
 except Exception:
     MAP_COMPONENT=None
 
 
-def mount_map(points=None,center=None,zoom=12,clickable=False,geolocation=False,route=None,key="map"):
-    cfg={"points":points or [],"center":center or [31.2001,29.9187],"zoom":zoom,"clickable":clickable,"geolocation":geolocation,"auto_request_gps":bool(geolocation and key.startswith("live_map_RIDER")),"route":route}
+def mount_map(points=None,center=None,zoom=12,clickable=False,geolocation=False,route=None,key="map",selected=None,search_result=None):
+    cfg={"points":points or [],"center":center or [31.2001,29.9187],"zoom":zoom,"clickable":clickable,"geolocation":geolocation,"auto_request_gps":bool(geolocation and key.startswith("live_map_RIDER")),"route":route,"selected":selected,"search_result":search_result}
     if MAP_COMPONENT:
         import base64
         payload=base64.b64encode(json.dumps(cfg,ensure_ascii=False).encode()).decode()
         return MAP_COMPONENT(key=key,data=payload)
     pts=[{"lat":p["lat"],"lon":p["lng"]} for p in (points or []) if p.get("lat") is not None and p.get("lng") is not None]
-    if pts: st.map(pd.DataFrame(pts),latitude="lat",longitude="lon",zoom=zoom,height=430)
+    if pts: st.map(pd.DataFrame(pts),latitude="lat",longitude="lon",zoom=zoom,height=470)
     else: st.info("الخريطة تحتاج إصدار Streamlit حديثاً أو لا توجد مواقع صالحة.")
     return None
 
@@ -794,7 +732,7 @@ def geocode_address(query):
     if not query: return None
     try:
         url="https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&accept-language=ar&q="+quote(query+", Alexandria, Egypt")
-        req=Request(url,headers={"User-Agent":"ONWAY-Delivery/6.0 (operations app)"})
+        req=Request(url,headers={"User-Agent":"ONWAY-Delivery/8.1 (operations app)"})
         with urlopen(req,timeout=8) as r: data=json.loads(r.read().decode("utf-8"))
         if data:
             return {"lat":round(float(data[0]["lat"]),6),"lng":round(float(data[0]["lon"]),6),"address":data[0].get("display_name",query)}
@@ -943,13 +881,26 @@ def map_points_for(user):
 @st.fragment(run_every="5s")
 def live_map_fragment(user, navigation=False, route=None):
     points=map_points_for(user)
-    result=mount_map(points,center=[31.2001,29.9187],zoom=12,clickable=navigation,geolocation=navigation or user["role"]=="RIDER",route=route,key="live_map_navigation" if navigation else f"live_map_{user['role']}")
+    current_sel=st.session_state.get("map_selection") if navigation else None
+    search_result=st.session_state.pop("map_search_request",None) if navigation else None
+    result=mount_map(points,center=[31.2001,29.9187],zoom=12,clickable=navigation,geolocation=(navigation or user["role"]=="RIDER"),route=route,key="live_map_navigation" if navigation else f"live_map_{user['role']}",selected=current_sel,search_result=search_result)
     if result:
-        mc=getattr(result,"map_click",None); gps=getattr(result,"gps",None); rm=getattr(result,"route_meta",None)
+        mc=getattr(result,"map_click",None); gps=getattr(result,"gps",None); rm=getattr(result,"route_meta",None); sr=getattr(result,"search_result",None); mk=getattr(result,"marker_click",None)
         if mc:
             try:
                 st.session_state.map_selection=json.loads(mc)
+                st.session_state.map_search_request=st.session_state.map_selection
                 st.rerun()
+            except Exception: pass
+        if sr:
+            try:
+                st.session_state.map_selection=json.loads(sr)
+                st.session_state.map_search_request=st.session_state.map_selection
+                st.rerun()
+            except Exception: pass
+        if mk:
+            try:
+                st.session_state.map_marker=json.loads(mk)
             except Exception: pass
         if gps:
             try:
@@ -1016,7 +967,7 @@ def render_navigation_center(user):
             g=geocode_address(q)
             if g: st.session_state.map_selection=g; st.success("تم تحديد الوجهة.")
             else: st.error("لم يتم العثور على الوجهة.")
-    if target: st.session_state.map_selection=target
+    if target: st.session_state.map_selection=target; st.session_state.map_search_request=target
     live_map_fragment(user,navigation=True)
     sel=st.session_state.get("map_selection") or {}
     if sel.get("lat") is not None:
@@ -1494,6 +1445,27 @@ def sidebar(user):
 
 
 # =========================================================
+# تنقل علوي بدلاً من Sidebar — يحافظ على كامل الشاشة
+# =========================================================
+def top_navigation(user):
+    menu=nav_menu(user)
+    if not menu: return
+    current=st.session_state.get("page",menu[0][1])
+    primary=menu[:5]
+    extra=menu[5:]
+    st.markdown('<div class="top-nav-panel"><div class="top-nav-label">التشغيل</div></div>',unsafe_allow_html=True)
+    cols=st.columns(len(primary),gap="small")
+    for i,(label,key) in enumerate(primary):
+        if cols[i].button(label,type="primary" if current==key else "secondary",use_container_width=True,key=f"nav_top_{key}"):
+            st.session_state.page=key; st.rerun()
+    if extra:
+        labels=[x[0] for x in extra]
+        cur_label=next((x[0] for x in extra if x[1]==current), "المزيد…")
+        choice=st.selectbox("",["المزيد…"]+labels,index=(labels.index(cur_label)+1 if cur_label in labels else 0),label_visibility="collapsed",key="top_nav_more")
+        if choice!="المزيد…":
+            st.session_state.page=dict(extra)[choice]; st.rerun()
+
+# =========================================================
 # تشغيل التطبيق
 # =========================================================
 setup_db()
@@ -1503,7 +1475,7 @@ if "user" not in st.session_state:
 
 base_user=st.session_state.user
 user=effective_user()
-sidebar(user)
+top_navigation(user)
 page=st.session_state.get("page",nav_menu(user)[0][1])
 try:
     if page=="dashboard": render_dashboard(user)
