@@ -296,10 +296,18 @@ def ranked_riders(pickup_lat=None, pickup_lng=None):
     return r.sort_values(["score","active_orders","name"]).reset_index(drop=True)
 
 
+def actor_is_owner(actor):
+    if not actor: return False
+    if actor.get("role") == "OWNER": return True
+    base=st.session_state.get("user") or {}
+    return base.get("role") == "OWNER" and base.get("id") == actor.get("id")
+
+
 # =========================================================
 # CRUD / الحسابات
 # =========================================================
 def create_restaurant(data, actor):
+    if not actor_is_owner(actor): raise PermissionError("إضافة المطاعم صلاحية المالك فقط.")
     if not data.get("name","").strip(): raise ValueError("اسم المطعم مطلوب.")
     rid=uid("RST")
     with get_conn() as c:
@@ -308,6 +316,7 @@ def create_restaurant(data, actor):
 
 
 def create_branch(data, actor):
+    if not actor_is_owner(actor): raise PermissionError("إضافة الفروع صلاحية المالك فقط.")
     if not data.get("name","").strip(): raise ValueError("اسم الفرع مطلوب.")
     if data.get("lat") is None or data.get("lng") is None: raise ValueError("اختَر موقع الفرع على الخريطة أولاً.")
     bid=uid("BRN")
@@ -317,6 +326,7 @@ def create_branch(data, actor):
 
 
 def create_rider(data, actor):
+    if not actor_is_owner(actor): raise PermissionError("إضافة الطيارين صلاحية المالك فقط.")
     if not data.get("name","").strip(): raise ValueError("اسم الطيار مطلوب.")
     rid=uid("RYD")
     with get_conn() as c:
@@ -325,6 +335,7 @@ def create_rider(data, actor):
 
 
 def create_user(data, actor):
+    if not actor_is_owner(actor): raise PermissionError("إدارة المستخدمين صلاحية المالك فقط.")
     email=data.get("email","").strip().lower(); pin=data.get("pin","").strip()
     if not data.get("name","").strip() or "@" not in email or not pin.isdigit() or len(pin)<4: raise ValueError("الاسم والبريد وPIN صحيحة مطلوبة.")
     uidv=uid("USR")
@@ -334,12 +345,14 @@ def create_user(data, actor):
 
 
 def update_rider(rider_id, phone, salary, actor):
+    if not actor_is_owner(actor): raise PermissionError("تعديل بيانات الطيارين صلاحية المالك فقط.")
     old=one("SELECT * FROM riders WHERE id=?",(rider_id,))
     with get_conn() as c: c.execute("UPDATE riders SET phone=?,salary=? WHERE id=?",(phone.strip(),float(salary),rider_id))
     new=one("SELECT * FROM riders WHERE id=?",(rider_id,)); audit(actor["id"],"update","rider",rider_id,before=old,after=new)
 
 
 def update_restaurant(rid, phone, billing_mode, actor):
+    if not actor_is_owner(actor): raise PermissionError("تعديل المطاعم صلاحية المالك فقط.")
     old=one("SELECT * FROM restaurants WHERE id=?",(rid,))
     with get_conn() as c: c.execute("UPDATE restaurants SET phone=?,billing_mode=? WHERE id=?",(phone.strip(),billing_mode,rid))
     new=one("SELECT * FROM restaurants WHERE id=?",(rid,)); audit(actor["id"],"update","restaurant",rid,before=old,after=new)
@@ -361,6 +374,7 @@ def set_active(entity, entity_id, active, actor):
 
 
 def reset_user_pin(user_id, actor):
+    if not actor_is_owner(actor): raise PermissionError("إعادة تعيين PIN صلاحية المالك فقط.")
     u=one("SELECT * FROM users WHERE id=?",(user_id,));
     if not u: raise ValueError("المستخدم غير موجود.")
     pin=''.join(secrets.choice('0123456789') for _ in range(6))
@@ -369,6 +383,7 @@ def reset_user_pin(user_id, actor):
 
 
 def create_order(data, actor):
+    if not actor_is_owner(actor) and actor.get("role") != "DISPATCHER": raise PermissionError("إنشاء الطلبات صلاحية المالك أو الديسباتشر فقط.")
     oid=uid("ORD")
     with get_conn() as c:
         if c.execute("SELECT 1 FROM orders WHERE order_no=?",(data["order_no"],)).fetchone(): raise ValueError("رقم الطلب موجود بالفعل.")
@@ -396,6 +411,7 @@ def create_order(data, actor):
 
 
 def assign_rider(order_id, rider_id, actor):
+    if not actor_is_owner(actor) and actor.get("role") != "DISPATCHER": raise PermissionError("تعيين الطيارين صلاحية المالك أو الديسباتشر فقط.")
     with get_conn() as c:
         oldr=c.execute("SELECT * FROM orders WHERE id=?",(order_id,)).fetchone()
         if not oldr: raise ValueError("الطلب غير موجود.")
@@ -424,8 +440,8 @@ def change_order_status(order_id,new_status,actor):
         if actor["role"]=="RESTAURANT":
             if old["restaurant_id"]!=actor.get("ref_id"): raise ValueError("لا تملك هذا الطلب.")
             if new_status!="ملغى" or old["status"] not in ("جديد","تم التعيين","تم القبول"): raise ValueError("المطعم يستطيع إلغاء الطلب قبل الاستلام فقط.")
-        if actor["role"]=="RIDER" and old["rider_id"]!=actor.get("ref_id"): raise ValueError("الطلب غير مخصص لك.")
-        if actor["role"]=="RIDER" and new_status not in transitions(old["status"]): raise ValueError(f"لا يمكن الانتقال من {old['status']} إلى {new_status}.")
+        if actor["role"]=="RIDER" and not actor_is_owner(actor) and old["rider_id"]!=actor.get("ref_id"): raise ValueError("الطلب غير مخصص لك.")
+        if actor["role"]=="RIDER" and not actor_is_owner(actor) and new_status not in transitions(old["status"]): raise ValueError(f"لا يمكن الانتقال من {old['status']} إلى {new_status}.")
         if new_status not in transitions(old["status"]): raise ValueError(f"الانتقال من {old['status']} إلى {new_status} غير مسموح.")
         stamp=now_iso(); cols=["status=?"]; vals=[new_status]
         if new_status=="تم القبول": cols.append("accepted_at=?"); vals.append(stamp)
@@ -448,7 +464,7 @@ def update_order(order_id, data, actor):
     old=order_with_names(data.get("order_no_old")) if data.get("order_no_old") else one("SELECT * FROM orders WHERE id=?",(order_id,))
     if not old: raise ValueError("الطلب غير موجود.")
     if old["status"] in ("تم التسليم","ملغى"): raise ValueError("لا يمكن تعديل طلب مغلق.")
-    if actor["role"]=="RIDER": raise ValueError("لا يسمح للطيار بتعديل بيانات الطلب التشغيلية.")
+    if actor["role"]=="RIDER" and not actor_is_owner(actor): raise ValueError("لا يسمح للطيار بتعديل بيانات الطلب التشغيلية.")
     fields=["delivery_address=?","delivery_lat=?","delivery_lng=?","distance_km=?","eta_minutes=?","notes=?"]
     vals=[data["delivery_address"],data.get("delivery_lat"),data.get("delivery_lng"),float(data["distance_km"]),int(data["eta_minutes"]),data.get("notes","")]
     if actor["role"] in ("OWNER","DISPATCHER"):
@@ -513,9 +529,13 @@ def payroll_summary(rider_id, period):
     daily=float(rider["salary"])/float(get_setting("working_days",26))
     leave_ded=(excused*float(get_setting("excused_leave_days",1))+unexcused*float(get_setting("unexcused_leave_days",1.25)))*daily
     orders=df("SELECT * FROM orders WHERE rider_id=? AND status='تم التسليم' AND delivered_at>=? AND delivered_at<?",(rider_id,start+" 00:00:00",end+" 00:00:00"))
-    commissions=float(orders["rider_commission"].sum()) if not orders.empty else 0.0
-    rewards=float(orders["reward"].sum()) if not orders.empty else 0.0
-    discounts=float(orders["discount"].sum()) if not orders.empty else 0.0
+    # لا نستبعد من الراتب إلا الطلبات التي سُويت فعلاً للطيار، وليس طلبات المطعم في جدول التسويات المشترك.
+    settled_cash_orders=df("SELECT si.order_id FROM settlement_items si JOIN settlements s ON s.id=si.settlement_id WHERE s.kind='طيار_كاش' AND si.order_id IN (SELECT id FROM orders WHERE rider_id=? AND status='تم التسليم' AND delivered_at>=? AND delivered_at<?)",(rider_id,start+" 00:00:00",end+" 00:00:00"))
+    settled_ids=set(settled_cash_orders["order_id"].tolist()) if not settled_cash_orders.empty else set()
+    pending=orders[~orders["id"].isin(settled_ids)] if not orders.empty else orders
+    commissions=float(pending["rider_commission"].sum()) if not pending.empty else 0.0
+    rewards=float(pending["reward"].sum()) if not pending.empty else 0.0
+    discounts=float(pending["discount"].sum()) if not pending.empty else 0.0
     adj=df("SELECT type,COALESCE(SUM(amount),0) amount FROM payroll_adjustments WHERE rider_id=? AND period=? GROUP BY type",(rider_id,period))
     add=float(adj.loc[adj["type"]=="إضافة","amount"].iloc[0]) if not adj.empty and (adj["type"]=="إضافة").any() else 0.0
     deduct=float(adj.loc[adj["type"].isin(["خصم","سلفة"]),"amount"].sum()) if not adj.empty else 0.0
@@ -556,6 +576,7 @@ def rider_unsettled_orders(rider_id, start, end):
 
 
 def create_rider_settlement(rider_id, start, end, actor):
+    if not actor_is_owner(actor): raise PermissionError("تصفية عمولات الطيارين صلاحية المالك فقط.")
     os=rider_unsettled_orders(rider_id,start,end)
     if os.empty: raise ValueError("لا توجد طلبات كاش غير مصفاة في الفترة.")
     gross=float(os["remaining_cash"].sum()); commissions=float(os["rider_commission"].sum()); rewards=float(os["reward"].sum()); discounts=float(os["discount"].sum())
@@ -608,122 +629,166 @@ def cash_receipts_today():
 
 
 # =========================================================
-# =========================================================
-# خريطة ONWAY التشغيلية — مبنية على خريطة Netlify الأصلية مع دمجها داخل التطبيق
+# خريطة ONWAY التشغيلية — نسخة V9 ميدانية مستقرة
 # =========================================================
 MAP_COMPONENT=None
+NOTIFY_COMPONENT=None
 try:
     from streamlit.components.v2 import component as _component
 
     MAP_HTML="""
     <div id='owroot' dir='rtl'>
-      <div class='ow-search'>
+      <div id='owsearchbar'>
         <input id='owsearch' autocomplete='off' placeholder='ابحث عن شارع، مطعم، منطقة أو وجهة…' />
-        <button id='owmic' title='بحث صوتي'>🎤</button>
+        <button id='owmic' aria-label='بحث صوتي'>🎤</button>
         <button id='owsearchbtn'>بحث</button>
       </div>
-      <div id='owhint'>انقر على الخريطة لتحديد الوجهة أو اضغط «GPS» لمعرفة موقع الجهاز.</div>
+      <div id='owhint'>اضغط على الخريطة لتحديد وجهة • استخدم GPS من زر الموقع</div>
       <div id='owmap'></div>
       <div id='owstatus'></div>
-      <button id='owgps'>📍 GPS</button>
+      <button id='owgps' type='button'>📍 تشغيل موقعي</button>
       <div id='owcontrols'>
-        <button id='owshare' title='مشاركة الوجهة'>🔗</button>
-        <button id='owfit' title='ملاءمة العناصر'>⌖</button>
-        <button id='owfull' title='شاشة كاملة'>⛶</button>
+        <button id='owfit' type='button' title='ملاءمة الخريطة'>⌖</button>
+        <button id='owshare' type='button' title='مشاركة الوجهة'>↗</button>
+        <button id='owfull' type='button' title='شاشة كاملة'>⛶</button>
       </div>
       <div id='owbadge'></div>
     </div>
     """
     MAP_CSS="""
     @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@500;600;700;800;900&display=swap');
-    *{box-sizing:border-box}#owroot{height:100%;min-height:470px;position:relative;overflow:hidden;border-radius:18px;background:#101318;font-family:Cairo,Arial,sans-serif}
-    #owmap{position:absolute;inset:0}.leaflet-container{font-family:Cairo,Arial,sans-serif;background:#dfe5ea}.leaflet-popup-content{direction:rtl;line-height:1.7;font-size:12px}.leaflet-control{font-family:Cairo,Arial,sans-serif}
-    .ow-search{position:absolute;top:12px;left:50%;transform:translateX(-50%);z-index:1200;display:flex;gap:6px;width:min(94%,560px);padding:7px;background:rgba(18,18,18,.94);border:1px solid #3a414d;border-radius:999px;box-shadow:0 8px 28px rgba(0,0,0,.28);backdrop-filter:blur(10px)}
-    .ow-search input{flex:1;min-width:0;border:0;outline:0;background:transparent;color:#fff;font:700 13px Cairo,Arial;padding:7px 10px}.ow-search input::placeholder{color:#8b96a5}.ow-search button,.ow-search+button{border:0;color:#fff;background:#252b34;border-radius:999px;padding:8px 11px;font:800 12px Cairo;cursor:pointer}.ow-search #owsearchbtn{background:#FF5A00}.ow-search #owmic{background:#00B368}
-    #owhint{position:absolute;top:72px;right:50%;transform:translateX(50%);z-index:1150;background:rgba(16,19,24,.82);border:1px solid rgba(255,255,255,.08);color:#ffd18b;padding:5px 10px;border-radius:999px;font:700 10px Cairo;pointer-events:none;white-space:nowrap;max-width:92%;overflow:hidden;text-overflow:ellipsis}
-    #owstatus{display:none;position:absolute;top:108px;right:50%;transform:translateX(50%);z-index:1250;background:rgba(16,19,24,.96);color:#fff;padding:7px 12px;border-radius:999px;font:800 11px Cairo;box-shadow:0 6px 18px rgba(0,0,0,.25)}
-    #owgps{display:none;position:absolute;top:12px;right:12px;z-index:1250;border:1px solid #2d3744;background:#007AFF;color:#fff;border-radius:999px;padding:9px 13px;font:900 11px Cairo;box-shadow:0 6px 16px rgba(0,0,0,.24);cursor:pointer}#owgps.on{background:#00B368}#owgps.warn{background:#FFB020;color:#161616}
-    #owcontrols{position:absolute;bottom:16px;left:16px;z-index:1200;display:flex;gap:7px}#owcontrols button{width:42px;height:42px;border:1px solid #3a414d;background:rgba(18,18,18,.92);color:#fff;border-radius:13px;font-size:17px;cursor:pointer;box-shadow:0 5px 16px rgba(0,0,0,.24)}
-    #owbadge{display:none;position:absolute;bottom:16px;right:16px;z-index:1200;background:rgba(18,18,18,.92);color:#dbe1e8;border:1px solid #3a414d;padding:8px 10px;border-radius:999px;font:800 10px Cairo;box-shadow:0 5px 16px rgba(0,0,0,.24)}
-    .owpin{display:flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;border:2px solid #fff;box-shadow:0 4px 14px rgba(0,0,0,.25);font-size:17px}.owpin.rider{box-shadow:0 0 0 5px rgba(0,194,122,.12),0 4px 14px rgba(0,0,0,.25)}
-    @media(max-width:650px){#owroot{min-height:58vh}.ow-search{width:95%;top:9px}.ow-search input{font-size:14px}.ow-search button{padding:8px 10px}.owhint{display:none}#owhint{top:66px;font-size:9px}.leaflet-control-zoom{margin-bottom:72px!important}.leaflet-bottom.leaflet-left{bottom:7px}}
+    *{box-sizing:border-box}
+    #owroot{position:relative;width:100%;height:clamp(520px,74svh,820px);min-height:520px;overflow:hidden;border:1px solid #28303a;border-radius:18px;background:#101318;font-family:Cairo,Arial,sans-serif;isolation:isolate}
+    #owmap{position:absolute;inset:0;width:100%;height:100%;background:#20242b}
+    .leaflet-container{font-family:Cairo,Arial,sans-serif!important;background:#20242b}
+    .leaflet-popup-content{direction:rtl;line-height:1.75;font-size:12px}
+    .leaflet-control{font-family:Cairo,Arial,sans-serif}
+    .ow-search{} 
+    #owsearchbar{position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:1200;width:min(94%,570px);display:flex;gap:6px;padding:7px;background:rgba(14,17,22,.96);border:1px solid #39414d;border-radius:999px;box-shadow:0 10px 30px rgba(0,0,0,.30);backdrop-filter:blur(10px)}
+    #owsearch{flex:1;min-width:0;border:0;outline:0;background:transparent;color:#fff;font:700 13px Cairo,Arial;padding:8px 10px}
+    #owsearch::placeholder{color:#8792a2}
+    #owsearchbar button{border:0;color:#fff;border-radius:999px;padding:9px 12px;font:900 12px Cairo,Arial;cursor:pointer;touch-action:manipulation}
+    #owmic{background:#00B368}#owsearchbtn{background:#FF5A00}
+    #owhint{position:absolute;top:70px;right:50%;transform:translateX(50%);z-index:1150;background:rgba(14,17,22,.82);border:1px solid rgba(255,255,255,.08);color:#ffd08f;padding:5px 10px;border-radius:999px;font:700 10px Cairo;pointer-events:none;max-width:88%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    #owstatus{display:none;position:absolute;top:108px;right:50%;transform:translateX(50%);z-index:1250;background:rgba(14,17,22,.97);color:#fff;padding:8px 13px;border-radius:999px;font:800 11px Cairo;box-shadow:0 8px 20px rgba(0,0,0,.28)}
+    #owgps{display:none;position:absolute;top:12px;right:12px;z-index:1250;border:1px solid #2d3744;background:#007AFF;color:#fff;border-radius:999px;padding:10px 13px;font:900 11px Cairo;box-shadow:0 6px 17px rgba(0,0,0,.25);cursor:pointer;touch-action:manipulation}#owgps.on{background:#00B368}#owgps.warn{background:#FFB020;color:#151515}
+    #owcontrols{position:absolute;bottom:15px;left:15px;z-index:1200;display:flex;gap:7px}#owcontrols button{width:44px;height:44px;border:1px solid #3a424e;background:rgba(14,17,22,.94);color:#fff;border-radius:13px;font-size:18px;cursor:pointer;touch-action:manipulation;box-shadow:0 6px 17px rgba(0,0,0,.25)}
+    #owbadge{display:none;position:absolute;bottom:16px;right:16px;z-index:1200;background:rgba(14,17,22,.94);color:#dfe6ee;border:1px solid #3a424e;padding:8px 10px;border-radius:999px;font:800 10px Cairo;box-shadow:0 6px 17px rgba(0,0,0,.25)}
+    .owpin{display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:50%;border:2px solid #fff;box-shadow:0 4px 15px rgba(0,0,0,.35);font-size:18px}
+    .owpin.rider{box-shadow:0 0 0 5px rgba(0,194,122,.12),0 4px 15px rgba(0,0,0,.35)}
+    @media(max-width:650px){#owroot{height:calc(100svh - 250px);min-height:560px;border-radius:14px}.owhint{display:none}#owhint{display:none}#owsearchbar{width:95%;top:8px}#owsearch{font-size:15px}#owsearchbar button{padding:10px 11px}.leaflet-control-zoom{margin-bottom:74px!important}.leaflet-control-attribution{font-size:8px!important}}
     """
     MAP_JS="""
     export default function(component){
       const {data,setTriggerValue,parentElement}=component;
-      const root=parentElement; if(!root) return;
-      const mapEl=root.querySelector('#owmap'), searchEl=root.querySelector('#owsearch'), searchBtn=root.querySelector('#owsearchbtn'), micBtn=root.querySelector('#owmic'), gpsBtn=root.querySelector('#owgps'), statusEl=root.querySelector('#owstatus'), badge=root.querySelector('#owbadge'), hint=root.querySelector('#owhint');
-      let cfg={}; try{cfg=JSON.parse(atob(data));}catch(e){return;}
-      const esc=v=>String(v??'').replace(/[<>&"']/g,ch=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'}[ch]));
-      const showStatus=t=>{statusEl.textContent=t;statusEl.style.display='block';clearTimeout(root.__owST);root.__owST=setTimeout(()=>statusEl.style.display='none',2600)};
-      const setBadge=(t,kind='normal')=>{badge.style.display='block';badge.textContent=t;badge.style.borderColor=kind==='ok'?'#2a614e':kind==='warn'?'#6b541e':'#3a414d';badge.style.color=kind==='ok'?'#8df0c8':kind==='warn'?'#ffd36e':'#dbe1e8'};
-      const loadCss=()=>{if(document.getElementById('ow-leaflet-css'))return;const l=document.createElement('link');l.id='ow-leaflet-css';l.rel='stylesheet';l.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';document.head.appendChild(l)};
-      const loadJs=src=>new Promise((resolve,reject)=>{if(window.L){resolve();return;}const s=document.createElement('script');s.src=src;s.onload=resolve;s.onerror=reject;document.head.appendChild(s)});
-      const routeKey=cfg.route?.from&&cfg.route?.to?JSON.stringify([cfg.route.from,cfg.route.to]):'';
-      const distanceM=(a,b)=>{const R=6371000,p1=a[0]*Math.PI/180,p2=b[0]*Math.PI/180,dp=(b[0]-a[0])*Math.PI/180,dl=(b[1]-a[1])*Math.PI/180;const x=Math.sin(dp/2)**2+Math.cos(p1)*Math.cos(p2)*Math.sin(dl/2)**2;return 2*R*Math.asin(Math.sqrt(x));};
+      const root=parentElement;if(!root)return;
+      const mapEl=root.querySelector('#owmap'),searchEl=root.querySelector('#owsearch'),searchBtn=root.querySelector('#owsearchbtn'),micBtn=root.querySelector('#owmic'),gpsBtn=root.querySelector('#owgps'),statusEl=root.querySelector('#owstatus'),badge=root.querySelector('#owbadge');
+      const cfg=data||{};
+      const esc=v=>String(v??'').replace(/[<>&\"']/g,ch=>({'<':'&lt;','>':'&gt;','&':'&amp;','\"':'&quot;',"'":'&#39;'}[ch]));
+      const showStatus=t=>{statusEl.textContent=t;statusEl.style.display='block';clearTimeout(root.__owStatusTimer);root.__owStatusTimer=setTimeout(()=>statusEl.style.display='none',2600)};
+      const setBadge=(t,kind='normal')=>{badge.textContent=t;badge.style.display='block';badge.style.borderColor=kind==='ok'?'#2a614e':kind==='warn'?'#6b541e':'#3a424e';badge.style.color=kind==='ok'?'#8df0c8':kind==='warn'?'#ffd36e':'#dbe1e8'};
+      const loadScriptFrom=src=>new Promise((resolve,reject)=>{const s=document.createElement('script');s.src=src;s.async=true;s.onload=resolve;s.onerror=()=>reject(new Error('leaflet load failed'));document.head.appendChild(s)});
+      const loadScript=async()=>{if(window.L)return;const urls=['https://unpkg.com/leaflet@1.9.4/dist/leaflet.js','https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js'];let last;for(const u of urls){try{await loadScriptFrom(u);return}catch(e){last=e}}throw last||new Error('leaflet load failed')};
+      const loadCss=()=>{if(document.getElementById('onway-leaflet-css'))return;const l=document.createElement('link');l.id='onway-leaflet-css';l.rel='stylesheet';l.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';l.onload=()=>{};l.onerror=()=>{if(!document.getElementById('onway-leaflet-css-fallback')){const f=document.createElement('link');f.id='onway-leaflet-css-fallback';f.rel='stylesheet';f.href='https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css';document.head.appendChild(f)}};document.head.appendChild(l)};
+      const distanceM=(a,b)=>{const R=6371000,p1=a[0]*Math.PI/180,p2=b[0]*Math.PI/180,dp=(b[0]-a[0])*Math.PI/180,dl=(b[1]-a[1])*Math.PI/180,q=Math.sin(dp/2)**2+Math.cos(p1)*Math.cos(p2)*Math.sin(dl/2)**2;return 2*R*Math.asin(Math.sqrt(q))};
+      const fire=(name,payload)=>{try{setTriggerValue(name,JSON.stringify(payload))}catch(e){}};
       (async()=>{
         loadCss();
-        try{await loadJs('https://unpkg.com/leaflet@1.9.4/dist/leaflet.js')}catch(e){showStatus('تعذر تحميل مكتبة الخريطة');return;}
-        let map=mapEl.__owMap;
+        try{await loadScript()}catch(e){showStatus('تعذر تحميل محرك الخريطة الآن');setBadge('🟠 اضغط إعادة تحميل','warn');return;}
+        let map=mapEl.__onwayMap;
         if(!map){
           const center=cfg.center||[31.2001,29.9187];
-          map=L.map(mapEl,{zoomControl:false,preferCanvas:true}).setView(center,cfg.zoom||12); mapEl.__owMap=map; mapEl.__owLayer=L.layerGroup().addTo(map); mapEl.__owRoute=L.layerGroup().addTo(map); mapEl.__owMe=L.layerGroup().addTo(map); mapEl.__owWatch=null; mapEl.__owGps=false; mapEl.__owClickable=false; mapEl.__owInitialFit=false; mapEl.__owRouteFitted=false; mapEl.__owLastGps=null;
+          map=L.map(mapEl,{zoomControl:false,preferCanvas:true,fadeAnimation:false,zoomAnimation:false,markerZoomAnimation:false,tap:true,scrollWheelZoom:true}).setView(center,Number(cfg.zoom||12));
+          mapEl.__onwayMap=map;mapEl.__layer=L.layerGroup().addTo(map);mapEl.__route=L.layerGroup().addTo(map);mapEl.__me=L.layerGroup().addTo(map);mapEl.__lastGps=null;mapEl.__watch=null;mapEl.__routeKey='';mapEl.__fitKey='';mapEl.__userMoved=false;mapEl.__routeOrigin=null;mapEl.__routeTarget=null;mapEl.__routeFetchedAt=0;
           L.control.zoom({position:'bottomleft'}).addTo(map);
-          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,detectRetina:true,attribution:'© OpenStreetMap contributors • ONWAY'}).addTo(map);
-        } else {const centerKey=JSON.stringify(cfg.center||[31.2001,29.9187]);if(centerKey!==mapEl.__owCenter){map.setView(cfg.center||[31.2001,29.9187],cfg.zoom||12);mapEl.__owCenter=centerKey;}}
-        mapEl.__owLayer.clearLayers();
+          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,detectRetina:true,crossOrigin:true,attribution:'© OpenStreetMap contributors • ONWAY'}).addTo(map);
+          setTimeout(()=>map.invalidateSize(false),60);setTimeout(()=>map.invalidateSize(false),450);setTimeout(()=>map.invalidateSize(false),1200);
+          window.addEventListener('resize',()=>map.invalidateSize(false),{passive:true});
+          if(window.ResizeObserver){mapEl.__ro=new ResizeObserver(()=>map.invalidateSize(false));mapEl.__ro.observe(mapEl);}
+          map.on('movestart',()=>{mapEl.__moving=true});map.on('moveend',()=>{mapEl.__moving=false});map.on('dragstart',()=>{mapEl.__userMoved=true});map.on('zoomstart',()=>{mapEl.__userMoved=true});
+        }
+        map.invalidateSize(false);
+        mapEl.__layer.clearLayers();
         const bounds=[];
-        (cfg.points||[]).forEach(p=>{if(p.lat==null||p.lng==null)return;const color=p.kind==='rider'?(p.online?'#00B368':'#7F8A97'):p.kind==='self'?'#007AFF':p.kind==='branch'?'#FF5A00':'#FF4D4D';const cl=p.kind==='rider'?'owpin rider':'owpin';const icon=L.divIcon({className:'',html:`<div class='${cl}' style='background:${color}'>${esc(p.icon||'📍')}</div>`,iconSize:[34,34],iconAnchor:[17,17]});const m=L.marker([p.lat,p.lng],{icon}).addTo(mapEl.__owLayer);let html=`<b>${esc(p.title||'')}</b>`;if(p.meta)html+=`<br>${esc(p.meta)}`;if(p.kind==='rider'&&p.accuracy!=null)html+=`<br>دقة GPS: ${esc(Number(p.accuracy).toFixed(1))} م`;m.bindPopup(`<div style='direction:rtl;font-family:Cairo,Arial;min-width:160px'>${html}</div>`);m.on('click',()=>setTriggerValue('marker_click',JSON.stringify({id:p.id,kind:p.kind})));bounds.push([p.lat,p.lng])});
-        const drawRoute=(coords,meta)=>{mapEl.__owRoute.clearLayers();L.polyline(coords,{color:'#FF5A00',weight:6,opacity:.88,lineCap:'round',lineJoin:'round'}).addTo(mapEl.__owRoute);setTriggerValue('route_meta',JSON.stringify(meta||{}));if(!mapEl.__owRouteFitted||mapEl.__owRouteKey!==routeKey){map.fitBounds(coords,{padding:[40,40],maxZoom:16});mapEl.__owRouteFitted=true;}};
-        window.__owRC=window.__owRC||{};window.__owRM=window.__owRM||{};
-        if(routeKey){
-          const from=cfg.route.from,to=cfg.route.to;
-          if(window.__owRC[routeKey]) drawRoute(window.__owRC[routeKey],window.__owRM[routeKey]); else {const url=`https://router.project-osrm.org/route/v1/driving/${from[1]},${from[0]};${to[1]},${to[0]}?overview=full&geometries=geojson`;fetch(url).then(r=>r.json()).then(d=>{if(d.routes&&d.routes[0]){const rt=d.routes[0],coords=rt.geometry.coordinates.map(c=>[c[1],c[0]]),meta={distance_m:rt.distance,duration_s:rt.duration};window.__owRC[routeKey]=coords;window.__owRM[routeKey]=meta;drawRoute(coords,meta)}}).catch(()=>showStatus('تعذر حساب خط السير الآن'));}
-          mapEl.__owRouteKey=routeKey;
-        }else{mapEl.__owRoute.clearLayers();mapEl.__owRouteKey='';mapEl.__owRouteFitted=false;if(bounds.length&&!mapEl.__owInitialFit){map.fitBounds(bounds,{padding:[35,35],maxZoom:15});mapEl.__owInitialFit=true}}
-        if(cfg.clickable&&!mapEl.__owClickable){
-          mapEl.__owClickable=true;
-          map.on('click',e=>{const lat=Number(e.latlng.lat.toFixed(6)),lng=Number(e.latlng.lng.toFixed(6));showStatus('جاري تحديد العنوان…');fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=18&accept-language=ar`).then(r=>r.json()).then(d=>{const address=d.display_name||'موقع محدد';setTriggerValue('map_click',JSON.stringify({lat,lng,address}));showStatus('تم تحديد الوجهة');}).catch(()=>{setTriggerValue('map_click',JSON.stringify({lat,lng,address:''}));showStatus('تم تحديد النقطة')})});
+        for(const p of (cfg.points||[])){
+          if(p.lat==null||p.lng==null||Number.isNaN(Number(p.lat))||Number.isNaN(Number(p.lng)))continue;
+          const color=p.kind==='rider'?(p.online?'#00B368':'#7F8A97'):p.kind==='self'?'#007AFF':p.kind==='branch'?'#FF5A00':'#FF4D4D';
+          const cls=p.kind==='rider'?'owpin rider':'owpin';
+          const icon=L.divIcon({className:'',html:`<div class='${cls}' style='background:${color}'>${esc(p.icon||'📍')}</div>`,iconSize:[36,36],iconAnchor:[18,18]});
+          const m=L.marker([Number(p.lat),Number(p.lng)],{icon,keyboard:false}).addTo(mapEl.__layer);
+          let html=`<b>${esc(p.title||'')}</b>`;if(p.meta)html+=`<br>${esc(p.meta)}`;if(p.kind==='rider'&&p.accuracy!=null)html+=`<br>دقة GPS: ${esc(Number(p.accuracy).toFixed(1))} م`;
+          m.bindPopup(`<div style='direction:rtl;font-family:Cairo,Arial;min-width:170px'>${html}</div>`);m.on('click',()=>fire('marker_click',{id:p.id,kind:p.kind}));bounds.push([Number(p.lat),Number(p.lng)]);
         }
-        const geolocate=()=>{
-          if(!navigator.geolocation){setBadge('🟠 GPS غير متاح','warn');return;}
-          gpsBtn.classList.remove('warn');gpsBtn.textContent='⏳ جاري GPS…';setBadge('⏳ طلب إذن الموقع…');
-          const push=pos=>{const c=pos.coords,now=Date.now(),lat=Number(c.latitude.toFixed(6)),lng=Number(c.longitude.toFixed(6));const p={lat,lng,accuracy:c.accuracy==null?null:Number(c.accuracy.toFixed(1)),heading:c.heading==null?null:Number(c.heading.toFixed(1)),speed:c.speed==null?null:Number((c.speed||0).toFixed(1)),ts:now};const last=mapEl.__owLastGps; if(last&&now-last.ts<4500&&distanceM([last.lat,last.lng],[lat,lng])<12)return;mapEl.__owLastGps=p;setTriggerValue('gps',JSON.stringify(p));gpsBtn.classList.add('on');gpsBtn.textContent='🟢 GPS';setBadge(`🟢 دقة ${p.accuracy==null?'—':p.accuracy+' م'}`,'ok');mapEl.__owMe.clearLayers();const ic=L.divIcon({className:'',html:`<div class='owpin' style='background:#007AFF'>🚴</div>`,iconSize:[34,34],iconAnchor:[17,17]});L.marker([lat,lng],{icon:ic}).addTo(mapEl.__owMe).bindPopup('📍 موقعي الآن');};
-          const fail=e=>{let t='تعذر تحديد الموقع';if(e?.code===1)t='تم رفض إذن الموقع';if(e?.code===2)t='الموقع غير متاح';if(e?.code===3)t='انتهت مهلة GPS';gpsBtn.classList.remove('on');gpsBtn.classList.add('warn');gpsBtn.textContent='📍 السماح بالموقع';setBadge('🟠 '+t,'warn');setTriggerValue('gps_status',JSON.stringify({code:e?.code||0,message:t}))};
-          navigator.geolocation.getCurrentPosition(push,fail,{enableHighAccuracy:true,maximumAge:3000,timeout:12000});
-          if(!mapEl.__owWatch){mapEl.__owWatch=navigator.geolocation.watchPosition(push,fail,{enableHighAccuracy:true,maximumAge:3000,timeout:15000})}
-        };
-        if(cfg.geolocation){gpsBtn.style.display='block';gpsBtn.onclick=geolocate;if(cfg.auto_request_gps&&!mapEl.__owAutoRequested){mapEl.__owAutoRequested=true;setTimeout(geolocate,500)}}
-        const doSearch=()=>{const q=(searchEl.value||'').trim();if(!q)return;showStatus('جاري البحث…');const url=`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&accept-language=ar&q=${encodeURIComponent(q+', Alexandria, Egypt')}`;fetch(url).then(r=>r.json()).then(d=>{if(!d||!d.length){showStatus('لم يتم العثور على المكان');return}const lat=Number(d[0].lat),lng=Number(d[0].lon),address=d[0].display_name||q;setTriggerValue('search_result',JSON.stringify({lat,lng,address,q}));showStatus('تم العثور على المكان ✅');}).catch(()=>showStatus('خطأ في الاتصال'))};
-        searchBtn.onclick=doSearch;searchEl.onkeydown=e=>{if(e.key==='Enter')doSearch()};
-        if(micBtn){micBtn.onclick=()=>{const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){showStatus('البحث الصوتي غير مدعوم في المتصفح');return}const r=new SR();r.lang='ar-EG';r.interimResults=false;r.maxAlternatives=1;r.onstart=()=>showStatus('تحدث الآن…');r.onresult=e=>{searchEl.value=e.results[0][0].transcript;doSearch()};r.onerror=()=>showStatus('تعذر قراءة الصوت');r.start();}}
-        const findAndShowTarget=p=>{if(p?.lat==null)return;const lat=Number(p.lat),lng=Number(p.lng);map.setView([lat,lng],17);L.marker([lat,lng]).addTo(mapEl.__owLayer).bindPopup(`<div style='direction:rtl;font-family:Cairo'><b>📍 ${esc(p.title||'الوجهة')}</b><br>${esc(p.address||'')}</div>`).openPopup();if(p.from){const from=p.from,to=[lat,lng],rk=JSON.stringify([from,to]);const url=`https://router.project-osrm.org/route/v1/driving/${from[1]},${from[0]};${to[1]},${to[0]}?overview=full&geometries=geojson`;fetch(url).then(r=>r.json()).then(d=>{if(d.routes&&d.routes[0]){const rt=d.routes[0],coords=rt.geometry.coordinates.map(c=>[c[1],c[0]]);L.polyline(coords,{color:'#FF5A00',weight:6,opacity:.9}).addTo(mapEl.__owRoute);setTriggerValue('route_meta',JSON.stringify({distance_m:rt.distance,duration_s:rt.duration,key:rk}))}})}};
-        if(cfg.search_result)findAndShowTarget(cfg.search_result);
-        if(cfg.selected&&cfg.selected.lat!=null){
-          const selectedKey=JSON.stringify([cfg.selected.lat,cfg.selected.lng,cfg.selected.title||'']);
-          if(mapEl.__owSelectedKey!==selectedKey){ mapEl.__owSelectedKey=selectedKey; map.setView([cfg.selected.lat,cfg.selected.lng],Math.max(16,cfg.zoom||12)); }
+        const route=cfg.route;
+        if(route?.from&&route?.to){
+          const from=[Number(route.from[0]),Number(route.from[1])],to=[Number(route.to[0]),Number(route.to[1])];
+          const targetKey=JSON.stringify(to);
+          const moved=mapEl.__routeOrigin?distanceM(mapEl.__routeOrigin,from):999999;
+          const targetChanged=mapEl.__routeTarget!==targetKey;
+          const stale=Date.now()-Number(mapEl.__routeFetchedAt||0)>30000;
+          const needFetch=!mapEl.__routeOrigin||targetChanged||moved>150||stale;
+          if(needFetch&&!mapEl.__routeKey){
+            mapEl.__routeKey='loading';mapEl.__route.clearLayers();mapEl.__fitKey='';
+            const url=`https://router.project-osrm.org/route/v1/driving/${from[1]},${from[0]};${to[1]},${to[0]}?overview=full&geometries=geojson&steps=false`;
+            fetch(url).then(r=>r.json()).then(d=>{
+              if(d.routes&&d.routes[0]){
+                const rt=d.routes[0],coords=rt.geometry.coordinates.map(c=>[c[1],c[0]]);
+                mapEl.__route.clearLayers();L.polyline(coords,{color:'#FF5A00',weight:6,opacity:.9,lineCap:'round',lineJoin:'round'}).addTo(mapEl.__route);
+                mapEl.__routeOrigin=from;mapEl.__routeTarget=targetKey;mapEl.__routeFetchedAt=Date.now();mapEl.__routeKey=JSON.stringify([from,to]);
+                fire('route_meta',{distance_m:rt.distance,duration_s:rt.duration});
+                if(!mapEl.__fitKey&&!mapEl.__userMoved){map.fitBounds(coords,{padding:[46,46],maxZoom:16});mapEl.__fitKey=mapEl.__routeKey;}
+              } else {mapEl.__routeKey='';showStatus('لم يتم العثور على خط سير مناسب');}
+            }).catch(()=>{mapEl.__routeKey='';showStatus('تعذر حساب خط السير حالياً')});
+          }
+        }else{mapEl.__route.clearLayers();mapEl.__routeKey='';mapEl.__routeOrigin=null;mapEl.__routeTarget=null;mapEl.__routeFetchedAt=0;mapEl.__fitKey='';if(bounds.length&&!cfg.preserveView&&!mapEl.__userMoved){map.fitBounds(bounds,{padding:[42,42],maxZoom:Number(cfg.zoom||14)});}}
+        if(cfg.selected&&cfg.selected.lat!=null){const k=JSON.stringify([cfg.selected.lat,cfg.selected.lng,cfg.selected.title||'']);if(mapEl.__selectedKey!==k){mapEl.__selectedKey=k;map.setView([Number(cfg.selected.lat),Number(cfg.selected.lng)],Math.max(16,Number(cfg.zoom||12)));L.circleMarker([Number(cfg.selected.lat),Number(cfg.selected.lng)],{radius:10,color:'#FF5A00',weight:3,fillColor:'#FF5A00',fillOpacity:.20}).addTo(mapEl.__layer);}}
+        if(!mapEl.__clickHandler){
+          mapEl.__clickHandler=true;
+          map.on('click',e=>{if(!cfg.clickable)return;const lat=Number(e.latlng.lat.toFixed(6)),lng=Number(e.latlng.lng.toFixed(6));showStatus('جاري تحديد العنوان…');fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=18&accept-language=ar`).then(r=>r.json()).then(d=>{fire('map_click',{lat,lng,address:d?.display_name||''});showStatus('تم تحديد الموقع ✅')}).catch(()=>{fire('map_click',{lat,lng,address:''});showStatus('تم تحديد النقطة')})});
         }
-        root.querySelector('#owshare').onclick=()=>{const s=cfg.selected||cfg.route?.to;if(!s){showStatus('حدد وجهة أولاً');return}const lat=s.lat??s[0],lng=s.lng??s[1],url=`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;if(navigator.share)navigator.share({title:'ONWAY',text:'وجهة ONWAY',url}).catch(()=>{});else navigator.clipboard?.writeText(url).then(()=>showStatus('تم نسخ رابط الملاحة'))};
-        root.querySelector('#owfit').onclick=()=>{if(bounds.length)map.fitBounds(bounds,{padding:[35,35],maxZoom:15});else map.setView(cfg.center||[31.2001,29.9187],cfg.zoom||12)};
+        const doSearch=()=>{const q=(searchEl?.value||'').trim();if(!q)return;showStatus('جاري البحث…');const url=`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&accept-language=ar&q=${encodeURIComponent(q+', Alexandria, Egypt')}`;fetch(url).then(r=>r.json()).then(d=>{if(!d?.length){showStatus('لم يتم العثور على المكان');return}const x=d[0],lat=Number(x.lat),lng=Number(x.lon);fire('search_result',{lat,lng,address:x.display_name||q,title:q});showStatus('تم العثور على المكان ✅')}).catch(()=>showStatus('تعذر الاتصال بخدمة البحث'))};
+        if(searchBtn&&!searchBtn.__owBound){searchBtn.__owBound=true;searchBtn.onclick=doSearch}if(searchEl&&!searchEl.__owBound){searchEl.__owBound=true;searchEl.onkeydown=e=>{if(e.key==='Enter')doSearch()}};
+        if(micBtn&&!micBtn.__owBound){micBtn.__owBound=true;micBtn.onclick=()=>{const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){showStatus('البحث الصوتي غير مدعوم');return}const sr=new SR();sr.lang='ar-EG';sr.interimResults=false;sr.maxAlternatives=1;sr.onstart=()=>showStatus('تحدث الآن…');sr.onresult=e=>{searchEl.value=e.results[0][0].transcript;doSearch()};sr.onerror=()=>showStatus('تعذر قراءة الصوت');sr.start()}};
+        const geolocate=()=>{if(!navigator.geolocation){setBadge('🟠 GPS غير متاح','warn');return}gpsBtn.classList.remove('warn');gpsBtn.textContent='⏳ تحديد الموقع…';setBadge('⏳ جاري الحصول على GPS');const push=pos=>{const c=pos.coords,ts=Date.now(),lat=Number(c.latitude.toFixed(6)),lng=Number(c.longitude.toFixed(6)),acc=c.accuracy==null?null:Number(c.accuracy.toFixed(1)),heading=c.heading==null?null:Number(c.heading.toFixed(1)),speed=c.speed==null?null:Number(c.speed.toFixed(1));const cur={lat,lng,accuracy:acc,heading,speed,ts};const last=mapEl.__lastGps;if(last&&ts-last.ts<4500&&distanceM([last.lat,last.lng],[lat,lng])<12)return;mapEl.__lastGps=cur;mapEl.__me.clearLayers();const ic=L.divIcon({className:'',html:`<div class='owpin' style='background:#007AFF'>🚴</div>`,iconSize:[36,36],iconAnchor:[18,18]});L.marker([lat,lng],{icon:ic}).addTo(mapEl.__me).bindPopup('📍 موقعي الآن');setBadge(`🟢 GPS • ${acc==null?'—':acc+' م'}`,'ok');gpsBtn.classList.add('on');gpsBtn.textContent='🟢 GPS';if(cfg.center_on_gps&&!mapEl.__firstGpsCenter){map.setView([lat,lng],15);mapEl.__firstGpsCenter=true}fire('gps',cur)};const fail=e=>{const msg=e?.code===1?'تم رفض إذن الموقع':e?.code===2?'الموقع غير متاح':e?.code===3?'انتهت مهلة GPS':'تعذر تحديد الموقع';gpsBtn.classList.remove('on');gpsBtn.classList.add('warn');gpsBtn.textContent='📍 السماح بالموقع';setBadge('🟠 '+msg,'warn');fire('gps_status',{code:e?.code||0,message:msg})};navigator.geolocation.getCurrentPosition(push,fail,{enableHighAccuracy:true,maximumAge:3000,timeout:12000});if(!mapEl.__watch){mapEl.__watch=navigator.geolocation.watchPosition(push,fail,{enableHighAccuracy:true,maximumAge:3000,timeout:15000})}};
+        if(cfg.geolocation){gpsBtn.style.display='block';if(!gpsBtn.__owBound){gpsBtn.__owBound=true;gpsBtn.onclick=geolocate}if(cfg.auto_request_gps&&!mapEl.__autoRequested){mapEl.__autoRequested=true;setTimeout(geolocate,500)}} else {gpsBtn.style.display='none'}
+        root.querySelector('#owfit').onclick=()=>{mapEl.__userMoved=false;if(bounds.length)map.fitBounds(bounds,{padding:[42,42],maxZoom:15});else map.setView(cfg.center||[31.2001,29.9187],Number(cfg.zoom||12))};
         root.querySelector('#owfull').onclick=()=>{if(!document.fullscreenElement)root.requestFullscreen?.().catch(()=>{});else document.exitFullscreen?.()};
+        root.querySelector('#owshare').onclick=()=>{const s=cfg.selected||cfg.route?.to;if(!s){showStatus('حدد وجهة أولاً');return}const lat=s.lat??s[0],lng=s.lng??s[1],url=`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;if(navigator.share)navigator.share({title:'ONWAY',text:'وجهة ONWAY',url}).catch(()=>{});else navigator.clipboard?.writeText(url).then(()=>showStatus('تم نسخ رابط الملاحة'))};
+        setTimeout(()=>map.invalidateSize(false),30);
       })();
       return ()=>{};
     }
     """
-    MAP_COMPONENT=_component("onway_operational_map_v8",html=MAP_HTML,css=MAP_CSS,js=MAP_JS,isolate_styles=True)
+    MAP_COMPONENT=_component("onway_operational_map_v9",html=MAP_HTML,css=MAP_CSS,js=MAP_JS,isolate_styles=False)
+
+    NOTIFY_HTML="<span id='ownotify' aria-hidden='true'></span>"
+    NOTIFY_CSS="#ownotify{display:none!important}"
+    NOTIFY_JS="""
+    export default function(component){
+      const {data}=component;const root=component.parentElement;if(!root)return;const token=String(data?.token||'');
+      if(window.__onwayNotifyToken===token)return;
+      window.__onwayNotifyToken=token;
+      if(!data?.enabled)return;
+      try{const C=window.AudioContext||window.webkitAudioContext;if(!C)return;const ctx=new C();if(ctx.state==='suspended')ctx.resume().catch(()=>{});const seq=data.kind==='new_order'?[880,1047,1319]:[660,880];let i=0;const play=()=>{if(i>=seq.length){ctx.close().catch(()=>{});return}const o=ctx.createOscillator(),g=ctx.createGain();o.type='sine';o.frequency.value=seq[i++];g.gain.setValueAtTime(.0001,ctx.currentTime);g.gain.exponentialRampToValueAtTime(.16,ctx.currentTime+.01);g.gain.exponentialRampToValueAtTime(.0001,ctx.currentTime+.13);o.connect(g);g.connect(ctx.destination);o.start();o.stop(ctx.currentTime+.15);setTimeout(play,80)};play();}catch(e){}
+      return ()=>{};
+    }
+    """
+    NOTIFY_COMPONENT=_component("onway_notify_v1",html=NOTIFY_HTML,css=NOTIFY_CSS,js=NOTIFY_JS,isolate_styles=False)
 except Exception:
     MAP_COMPONENT=None
+    NOTIFY_COMPONENT=None
 
 
-def mount_map(points=None,center=None,zoom=12,clickable=False,geolocation=False,route=None,key="map",selected=None,search_result=None):
-    cfg={"points":points or [],"center":center or [31.2001,29.9187],"zoom":zoom,"clickable":clickable,"geolocation":geolocation,"auto_request_gps":bool(geolocation and key.startswith("live_map_RIDER")),"route":route,"selected":selected,"search_result":search_result}
+def mount_map(points=None,center=None,zoom=12,clickable=False,geolocation=False,route=None,key="map",selected=None,search_result=None,height=None,preserve_view=False,center_on_gps=False):
+    cfg={"points":points or [],"center":center or [31.2001,29.9187],"zoom":zoom,"clickable":bool(clickable),"geolocation":bool(geolocation),"auto_request_gps":bool(geolocation and key.startswith("live_map_RIDER")),"center_on_gps":bool(center_on_gps),"route":route,"selected":selected,"search_result":search_result,"preserveView":bool(preserve_view),"height":height}
     if MAP_COMPONENT:
-        import base64
-        payload=base64.b64encode(json.dumps(cfg,ensure_ascii=False).encode()).decode()
-        return MAP_COMPONENT(key=key,data=payload)
-    pts=[{"lat":p["lat"],"lon":p["lng"]} for p in (points or []) if p.get("lat") is not None and p.get("lng") is not None]
-    if pts: st.map(pd.DataFrame(pts),latitude="lat",longitude="lon",zoom=zoom,height=470)
-    else: st.info("الخريطة تحتاج إصدار Streamlit حديثاً أو لا توجد مواقع صالحة.")
+        return MAP_COMPONENT(key=key,data=cfg)
+    # Fallback آمن: الخريطة الأساسية تظل مرئية إذا كانت نسخة Streamlit قديمة.
+    pts=[{"lat":p.get("lat"),"lon":p.get("lng")} for p in (points or []) if p.get("lat") is not None and p.get("lng") is not None]
+    if pts:
+        st.map(pd.DataFrame(pts),latitude="lat",longitude="lon",zoom=zoom,height=int(height or 520))
+    else:
+        st.info("الخريطة التفاعلية تحتاج نسخة Streamlit حديثة.")
     return None
 
 
@@ -732,14 +797,13 @@ def geocode_address(query):
     if not query: return None
     try:
         url="https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&accept-language=ar&q="+quote(query+", Alexandria, Egypt")
-        req=Request(url,headers={"User-Agent":"ONWAY-Delivery/8.1 (operations app)"})
+        req=Request(url,headers={"User-Agent":"ONWAY-Delivery/9.0 (operations app)"})
         with urlopen(req,timeout=8) as r: data=json.loads(r.read().decode("utf-8"))
         if data:
             return {"lat":round(float(data[0]["lat"]),6),"lng":round(float(data[0]["lon"]),6),"address":data[0].get("display_name",query)}
     except Exception:
         return None
     return None
-
 
 # =========================================================
 # وضع العمل — المالك يستطيع التبديل بين الاختصاصات بدون تسجيل خروج
@@ -837,6 +901,74 @@ def login():
             else: st.error("بيانات الدخول غير صحيحة.")
 
 
+
+# =========================================================
+# إشعارات التشغيل — بدون صلاحية خارجية أو خدمة مدفوعة
+# =========================================================
+def sound_notification(level="info"):
+    tone = {"new_order": (880, 0.18), "status": (660, 0.14), "warning": (440, 0.20)}.get(level, (660, 0.12))
+    st.markdown(f"""
+    <script>
+    (()=>{{
+      try{{
+        const C=window.AudioContext||window.webkitAudioContext;
+        if(!C)return;
+        const c=new C(),o=c.createOscillator(),g=c.createGain();
+        o.type='sine';o.frequency.value={tone[0]};g.gain.setValueAtTime(0.0001,c.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.18,c.currentTime+0.01);
+        g.gain.exponentialRampToValueAtTime(0.0001,c.currentTime+{tone[1]});
+        o.connect(g);g.connect(c.destination);o.start();o.stop(c.currentTime+{tone[1]+0.02});
+      }}catch(e){{}}
+    }})();
+    </script>
+    """, unsafe_allow_html=True)
+
+
+def notification_snapshot(user):
+    key=f"notify_snapshot_{user['id']}"
+    row=one("SELECT COUNT(*) n, COALESCE(SUM(CASE WHEN status='جديد' THEN 1 ELSE 0 END),0) fresh, COALESCE(MAX(COALESCE(delivered_at,picked_up_at,accepted_at,created_at)),'') stamp FROM orders WHERE created_at>=?",((datetime.now()-timedelta(minutes=30)).strftime("%Y-%m-%d %H:%M:%S"),))
+    snap=f"{int(row['n'] or 0)}|{int(row['fresh'] or 0)}|{row['stamp'] or ''}" if row else "0|0|"
+    prev=st.session_state.get(key)
+    st.session_state[key]=snap
+    if prev is None:
+        return None
+    oldn=int(str(prev).split('|')[0] or 0); oldstamp=str(prev).split('|',2)[-1]
+    if snap==prev: return None
+    if int(str(snap).split('|')[0] or 0)>oldn: return "new_order"
+    if str(snap).split('|',2)[-1]!=oldstamp: return "status"
+    return None
+
+def notify_user(user, kind="status"):
+    if not st.session_state.get("sound_enabled", False) or NOTIFY_COMPONENT is None:
+        return
+    token=f"{kind}|{datetime.now().timestamp()}"
+    NOTIFY_COMPONENT(key=f"notify_{user['id']}", data={"enabled":True,"kind":kind,"token":token})
+
+
+
+@st.fragment(run_every="3s")
+def live_notifications_fragment(user):
+    role=user.get("role")
+    if role not in ("OWNER","DISPATCHER","RIDER"):
+        return
+    if role=="RIDER":
+        row=one("SELECT COUNT(*) n, COALESCE(MAX(created_at),'') stamp FROM orders WHERE rider_id=? AND status NOT IN ('تم التسليم','ملغى')",(user.get("ref_id"),)) or {"n":0,"stamp":""}
+        key=f"live_notify_{user['id']}"; snap=f"{int(row['n'] or 0)}|{row['stamp'] or ''}"; prev=st.session_state.get(key); st.session_state[key]=snap
+        if prev is not None and snap!=prev:
+            oldn=int(str(prev).split('|')[0] or 0); oldstamp=str(prev).split('|',1)[-1]
+            if int(row['n'] or 0)>oldn or str(row['stamp'] or '')!=oldstamp:
+                st.toast("🔔 تم توجيه/تحديث طلب لك",icon="🧡")
+                notify_user(user,"new_order")
+    else:
+        row=one("SELECT COUNT(*) n, COALESCE(SUM(CASE WHEN status='جديد' THEN 1 ELSE 0 END),0) fresh, COALESCE(MAX(COALESCE(delivered_at,picked_up_at,accepted_at,created_at)),'') stamp FROM orders WHERE created_at>=?",((datetime.now()-timedelta(minutes=30)).strftime("%Y-%m-%d %H:%M:%S"),)) or {"n":0,"fresh":0,"stamp":""}
+        key=f"live_notify_{user['id']}"; snap=f"{int(row['n'] or 0)}|{int(row['fresh'] or 0)}|{row['stamp'] or ''}"; prev=st.session_state.get(key); st.session_state[key]=snap
+        if prev is not None and snap!=prev:
+            oldparts=str(prev).split('|',2); oldn=int(oldparts[0] or 0); oldstamp=oldparts[-1]
+            if int(row['n'] or 0)>oldn:
+                st.toast("🔔 يوجد طلب جديد يحتاج تدخلاً",icon="🧡"); notify_user(user,"new_order")
+            elif str(row['stamp'] or '')!=oldstamp:
+                st.toast("🔔 تم تحديث حالة طلب",icon="🧡"); notify_user(user,"status")
+
 # =========================================================
 # Dashboard / الخرائط
 # =========================================================
@@ -881,22 +1013,24 @@ def map_points_for(user):
 @st.fragment(run_every="5s")
 def live_map_fragment(user, navigation=False, route=None):
     points=map_points_for(user)
-    current_sel=st.session_state.get("map_selection") if navigation else None
-    search_result=st.session_state.pop("map_search_request",None) if navigation else None
-    result=mount_map(points,center=[31.2001,29.9187],zoom=12,clickable=navigation,geolocation=(navigation or user["role"]=="RIDER"),route=route,key="live_map_navigation" if navigation else f"live_map_{user['role']}",selected=current_sel,search_result=search_result)
+    current_sel=st.session_state.get("map_selection")
+    search_result=st.session_state.pop("map_search_request",None)
+    result=mount_map(points,center=[31.2001,29.9187],zoom=12,clickable=True,geolocation=(navigation or user["role"]=="RIDER"),route=route,key="live_map_navigation" if navigation else f"live_map_{user['role']}",selected=current_sel,search_result=search_result)
     if result:
         mc=getattr(result,"map_click",None); gps=getattr(result,"gps",None); rm=getattr(result,"route_meta",None); sr=getattr(result,"search_result",None); mk=getattr(result,"marker_click",None)
         if mc:
             try:
                 st.session_state.map_selection=json.loads(mc)
                 st.session_state.map_search_request=st.session_state.map_selection
-                st.rerun()
+                try: st.rerun(scope="fragment")
+                except Exception: st.rerun()
             except Exception: pass
         if sr:
             try:
                 st.session_state.map_selection=json.loads(sr)
                 st.session_state.map_search_request=st.session_state.map_selection
-                st.rerun()
+                try: st.rerun(scope="fragment")
+                except Exception: st.rerun()
             except Exception: pass
         if mk:
             try:
@@ -1006,11 +1140,23 @@ def render_dashboard(user):
 
     # إجراءات سريعة للمالك والديسباتشر
     if user["role"] in ("OWNER","DISPATCHER"):
+        snd=st.columns([1,1,2])
+        if snd[0].button("🔔 تشغيل صوت التنبيهات" if not st.session_state.get("sound_enabled",False) else "🔕 إيقاف صوت التنبيهات",use_container_width=True):
+            st.session_state.sound_enabled=not st.session_state.get("sound_enabled",False); st.rerun()
         q1,q2,q3,q4=st.columns(4,gap="small")
         if q1.button("＋ طلب جديد",type="primary",use_container_width=True): st.session_state.page="orders"; st.rerun()
         if q2.button("🚴 تعيين / تغيير طيار",use_container_width=True): st.session_state.page="orders"; st.rerun()
         if q3.button("🗺️ افتح الخريطة",use_container_width=True): st.session_state.page="map"; st.rerun()
         if q4.button("🧭 الملاحة",use_container_width=True) and user["role"]=="OWNER": st.session_state.page="navigation"; st.rerun()
+        if user["role"]=="OWNER":
+            a1,a2,a3=st.columns(3,gap="small")
+            if a1.button("＋ مطعم",use_container_width=True): st.session_state.page="restaurants"; st.session_state.quick_add_restaurant=True; st.rerun()
+            if a2.button("＋ فرع",use_container_width=True): st.session_state.page="restaurants"; st.session_state.quick_add_branch=True; st.rerun()
+            if a3.button("＋ طيار",use_container_width=True): st.session_state.page="riders"; st.session_state.quick_add_rider=True; st.rerun()
+
+    if user["role"] in ("OWNER","DISPATCHER") and notification_snapshot(user):
+        st.toast("🔔 يوجد طلب جديد يحتاج الانتباه", icon="🧡")
+        sound_notification("new_order")
 
     if d["overdue"]:
         st.markdown(f'<div class="cockpit-alert" style="border-color:rgba(255,77,77,.35);background:rgba(255,77,77,.07)"><b>🔴 {d["overdue"]} طلب يحتاج تدخلك الآن</b><br><span>ابدأ من الطلبات أو الخريطة لتحديد الطيار ومعالجة التأخير.</span></div>',unsafe_allow_html=True)
@@ -1154,7 +1300,7 @@ def render_riders(user):
                     if st.button("حفظ بيانات الطيار",key=f"rsave_{r['id']}"):
                         update_rider(r["id"],ph,sal,user); st.success("تم الحفظ."); st.rerun()
     if user["role"]=="OWNER":
-        with st.expander("＋ إضافة طيار"):
+        with st.expander("＋ إضافة طيار", expanded=bool(st.session_state.pop("quick_add_rider",False))):
             with st.form("add_rider"):
                 a,b,c=st.columns(3); n=a.text_input("الاسم"); ph=b.text_input("الهاتف"); sal=c.number_input("المرتب الأساسي",min_value=0.0,value=float(get_setting("salary_basic",6000)),step=100.0)
                 if st.form_submit_button("إضافة الطيار",type="primary",use_container_width=True):
@@ -1165,6 +1311,11 @@ def render_riders(user):
 def render_restaurants(user):
     header("المطاعم والفروع","الحالة، الحساب، والفروع مع تحديد المواقع بالنقر على الخريطة.")
     rs=all_restaurants()
+    if user["role"]=="OWNER" and st.session_state.pop("quick_add_branch",False):
+        if rs.empty:
+            st.warning("أضف مطعماً أولاً قبل إنشاء فرع.")
+        else:
+            qnames=rs["name"].tolist(); qname=st.selectbox("اختر المطعم لإضافة الفرع",qnames,key="quick_branch_restaurant"); qrid=rs[rs["name"]==qname].iloc[0]["id"]; st.session_state[f"branch_open_{qrid}"]=True
     for _,r in rs.iterrows():
         bs=branches_for(r["id"],False)
         with st.container(border=True):
@@ -1199,7 +1350,7 @@ def render_restaurants(user):
                         try: create_branch({"restaurant_id":r["id"],"name":n,"address":addr,"lat":p.get("lat"),"lng":p.get("lng")},user); st.session_state.branch_pick={}; st.success("تمت إضافة الفرع."); st.rerun()
                         except Exception as ex: st.error(str(ex))
     if user["role"]=="OWNER":
-        with st.expander("＋ إضافة مطعم"):
+        with st.expander("＋ إضافة مطعم", expanded=bool(st.session_state.pop("quick_add_restaurant",False))):
             with st.form("add_restaurant"):
                 a,b,c=st.columns(3); n=a.text_input("اسم المطعم"); ph=b.text_input("الهاتف"); mode=c.selectbox("التحصيل",["كاش","آجل"])
                 if st.form_submit_button("إضافة المطعم",type="primary",use_container_width=True):
@@ -1303,19 +1454,20 @@ def render_settlements(user):
     header("التسويات والخزينة","افصل بين تصفية كاش الطيار، تحصيل الآجل من المطاعم، وصرف الرواتب.")
     if user["role"] in ("OWNER","DISPATCHER","ACCOUNTANT"):
         with st.container(border=True):
-            st.markdown("### تصفية كاش الطيار")
+            st.markdown("### تصفية كاش الطيار — التنفيذ للمالك فقط")
             riders=df("SELECT id,name FROM riders ORDER BY name")
             if not riders.empty:
                 rn=st.selectbox("الطيار",riders["name"].tolist(),key="sett_rider"); rid=riders[riders["name"]==rn].iloc[0]["id"]; a,b=st.columns(2); start=a.date_input("من",value=date.today()); end=b.date_input("إلى",value=date.today()); os=rider_unsettled_orders(rid,start.isoformat(),(end+timedelta(days=1)).isoformat()); gross=float(os["cash_collected"].sum()) if not os.empty else 0; comm=float(os["rider_commission"].sum()) if not os.empty else 0; rew=float(os["reward"].sum()) if not os.empty else 0; dis=float(os["discount"].sum()) if not os.empty else 0; due=gross-comm-rew+dis
                 metric_grid([("عدد الطلبات",len(os),"غير مصفاة","info"),("الكاش",f"{gross:,.2f} ج","المتحصل","info"),("العمولات",f"{comm:,.2f} ج","لصالح الطيار","warn"),("التوريد",f"{due:,.2f} ج","المبلغ المطلوب للخزينة","good")])
-                if st.button("إغلاق التصفية وتسجيل الخزينة",type="primary",use_container_width=True):
+                if user["role"]!="OWNER": st.info("👑 التصفية لا ينفذها إلا المالك؛ يمكنك مراجعة الأرقام فقط.")
+                if actor_is_owner(user) and st.button("إغلاق التصفية وتسجيل الخزينة",type="primary",use_container_width=True):
                     try: sid,due,n=create_rider_settlement(rid,start.isoformat(),(end+timedelta(days=1)).isoformat(),user); st.success(f"تمت التصفية: {n} طلب • صافي التوريد {due:,.2f} ج"); st.rerun()
                     except Exception as ex: st.error(str(ex))
         with st.container(border=True):
             st.markdown("### تحصيل مطعم آجل")
             rs=all_restaurants(); credit=rs[rs["billing_mode"]=="آجل"] if not rs.empty else rs
             if not credit.empty:
-                rn=st.selectbox("المطعم",credit["name"].tolist(),key="sett_rest"); rid=credit[credit["name"]==rn].iloc[0]["id"]; a,b=st.columns(2); start=a.date_input("من",value=date.today(),key="rsstart"); end=b.date_input("إلى",value=date.today(),key="rsend"); os=restaurant_unsettled_orders(rid,start.isoformat(),(end+timedelta(days=1)).isoformat()); due=float(os["delivery_fee"].sum()) if not os.empty else 0; paid=st.number_input("المبلغ المحصل",min_value=0.0,max_value=due,value=due,step=10.0)
+                rn=st.selectbox("المطعم",credit["name"].tolist(),key="sett_rest"); rid=credit[credit["name"]==rn].iloc[0]["id"]; a,b=st.columns(2); start=a.date_input("من",value=date.today(),key="rsstart"); end=b.date_input("إلى",value=date.today(),key="rsend"); os=restaurant_unsettled_orders(rid,start.isoformat(),(end+timedelta(days=1)).isoformat()); due=float(os["remaining_due"].sum()) if not os.empty else 0; paid=st.number_input("المبلغ المحصل",min_value=0.0,max_value=due,value=due,step=10.0)
                 st.markdown(f"**المديونية غير المسددة:** `{due:,.2f} ج`")
                 if st.button("تسجيل تحصيل المطعم",type="primary",use_container_width=True):
                     try: create_restaurant_settlement(rid,start.isoformat(),(end+timedelta(days=1)).isoformat(),paid,user); st.success("تم تسجيل التحصيل."); st.rerun()
@@ -1340,11 +1492,11 @@ def render_analysis(user):
             try: vals.append((datetime.strptime(o["delivered_at"],"%Y-%m-%d %H:%M:%S")-datetime.strptime(o["created_at"],"%Y-%m-%d %H:%M:%S")).total_seconds()/60)
             except Exception: pass
         avg_time=round(sum(vals)/len(vals),1) if vals else 0
-    metric_grid([("إجمالي الطلبات",len(orders),"الفترة","info"),("نسبة التسليم",f"{len(delivered)/len(orders)*100:.1f}%","من إجمالي الطلبات","good"),("الإلغاء",len(cancel),f"{len(cancel)/len(orders)*100:.1f}%","من إجمالي الطلبات","danger"),("متوسط زمن التنفيذ",f"{avg_time:.1f} د","إنشاء → تسليم","info")])
+    metric_grid([("إجمالي الطلبات",len(orders),"الفترة","info"),("نسبة التسليم",f"{len(delivered)/len(orders)*100:.1f}%","من إجمالي الطلبات","good"),("الإلغاء",f"{len(cancel)} • {len(cancel)/len(orders)*100:.1f}%","من إجمالي الطلبات","danger"),("متوسط زمن التنفيذ",f"{avg_time:.1f} د","إنشاء → تسليم","info")])
     st.markdown("### أداء الطيارين")
     rrows=[]
     for _,r in df("SELECT id,name,salary FROM riders ORDER BY name").iterrows():
-        od=delivered[delivered["rider_id"]==r["id"]]; att=attendance_for_month(r["id"],start.strftime("%Y-%m")); hrs=round(sum(attendance_hours(x) for x in att.to_dict("records")),2) if not att.empty else 0
+        od=delivered[delivered["rider_id"]==r["id"]]; att=df("SELECT * FROM attendance WHERE rider_id=? AND work_date>=? AND work_date<=?",(r["id"],start.isoformat(),end.isoformat())); hrs=round(sum(attendance_hours(x) for x in att.to_dict("records")),2) if not att.empty else 0
         rrows.append({"الطيار":r["name"],"تم التسليم":len(od),"العمولات":round(float(od["rider_commission"].sum()),2) if not od.empty else 0,"الساعات":hrs,"متوسط العمولة/طلب":round(float(od["rider_commission"].mean()),2) if not od.empty else 0})
     if rrows: st.dataframe(pd.DataFrame(rrows),use_container_width=True,hide_index=True)
     st.markdown("### أداء المطاعم")
@@ -1373,6 +1525,71 @@ def render_tools(user):
         with st.expander("سجل التدقيق"): st.dataframe(df("SELECT created_at,actor_id,action,entity,entity_id FROM audit_log ORDER BY id DESC LIMIT 500").rename(columns={"created_at":"الوقت","actor_id":"المستخدم","action":"العملية","entity":"الكيان","entity_id":"المعرف"}),use_container_width=True,hide_index=True)
 
 
+
+# =========================================================
+# محفظة عمولات الطيار — العرض للطيار والتسوية للمالك فقط
+# =========================================================
+def render_rider_wallet(user):
+    header("محفظة الطيار","كل مستحقات الطيار في شاشة واحدة: العمولة المكتسبة، ما تمت تسويته، وما تبقى — والتصفية النقدية للمالك فقط.")
+    rid=user.get("ref_id")
+    if actor_is_owner(user) and not rid:
+        riders=df("SELECT id,name,status FROM riders ORDER BY name")
+        if riders.empty:
+            st.info("لا يوجد طيارون مسجلون حتى الآن.")
+            return
+        names=riders["name"].tolist(); selected=st.selectbox("اختر الطيار",names,key="owner_wallet_rider")
+        rid=str(riders[riders["name"]==selected].iloc[0]["id"])
+    if not rid:
+        st.error("لا يوجد طيار مرتبط بهذه المساحة.")
+        return
+    r=one("SELECT * FROM riders WHERE id=?",(rid,))
+    if not r:
+        st.error("بيانات الطيار غير موجودة."); return
+    start=date.today()-timedelta(days=6); end=date.today()
+    start_d=st.date_input("من",value=start,key=f"wallet_start_{rid}")
+    end_d=st.date_input("إلى",value=end,key=f"wallet_end_{rid}")
+    if end_d<start_d:
+        st.error("تاريخ النهاية يجب أن يكون بعد أو مساوياً لتاريخ البداية."); return
+    start_s=start_d.isoformat(); end_s=(end_d+timedelta(days=1)).isoformat()
+
+    delivered=df("SELECT * FROM orders WHERE rider_id=? AND status='تم التسليم' AND delivered_at>=? AND delivered_at<?",(rid,start_s+" 00:00:00",end_s+" 00:00:00"))
+    settled=df("SELECT DISTINCT si.order_id FROM settlement_items si JOIN settlements s ON s.id=si.settlement_id WHERE s.kind='طيار_كاش' AND si.order_id IN (SELECT id FROM orders WHERE rider_id=? AND status='تم التسليم' AND delivered_at>=? AND delivered_at<?)",(rid,start_s+" 00:00:00",end_s+" 00:00:00"))
+    settled_ids=set(settled["order_id"].tolist()) if not settled.empty else set()
+    earned_comm=float(delivered["rider_commission"].sum()) if not delivered.empty else 0.0
+    paid_comm=float(delivered[delivered["id"].isin(settled_ids)]["rider_commission"].sum()) if not delivered.empty and settled_ids else 0.0
+    open_comm=round(earned_comm-paid_comm,2)
+    os=rider_unsettled_orders(rid,start_s,end_s)
+    commissions_cash=float(os["rider_commission"].sum()) if not os.empty else 0.0
+    rewards_cash=float(os["reward"].sum()) if not os.empty else 0.0
+    discounts_cash=float(os["discount"].sum()) if not os.empty else 0.0
+    cash_open=float(os["remaining_cash"].sum()) if not os.empty else 0.0
+    cash_due=round(cash_open-commissions_cash-rewards_cash+discounts_cash,2)
+    metric_grid([
+        ("إجمالي العمولة المكتسبة",f"{earned_comm:,.2f} ج", "كل الطلبات المسلّمة", "good"),
+        ("عمولة تمت تسويتها",f"{paid_comm:,.2f} ج", "ضمن تصفيات الكاش", "info"),
+        ("عمولة متبقية",f"{open_comm:,.2f} ج", "تظهر في المستحقات", "warn" if open_comm else "good"),
+        ("صافي التصفية النقدية",f"{cash_due:,.2f} ج", "توريد/صرف الآن", "danger" if cash_due>0 else "good"),
+    ])
+    st.markdown('<div class="highlight"><b>تفسير المحفظة:</b> عمولات الكاش تُعتبر مسددة بمجرد إدخالها في تصفية الطيار، بينما عمولات طلبات الآجل تبقى مستحقة وتدخل في المستحقات الشهرية حتى تُصرف.</div>',unsafe_allow_html=True)
+
+    if os.empty:
+        st.success("✅ لا توجد طلبات كاش غير مصفاة في الفترة.")
+    else:
+        view=os[["order_no","restaurant","branch","delivered_at","billing_mode","rider_commission","reward","discount","remaining_cash"]].copy()
+        view.columns=["الطلب","المطعم","الفرع","التسليم","التحصيل","العمولة","المكافأة","الخصم","الكاش المتبقي"]
+        st.dataframe(view,use_container_width=True,hide_index=True)
+
+    if actor_is_owner(user) and not os.empty:
+        st.markdown('<div class="highlight"><b>👑 صلاحية المالك:</b> تنفيذ التصفية النقدية متاح لك وحدك.</div>',unsafe_allow_html=True)
+        if st.button("💰 تنفيذ تصفية الطيار الآن",type="primary",use_container_width=True):
+            try:
+                sid,due,n=create_rider_settlement(rid,start_s,end_s,user)
+                st.success(f"تمت التصفية بنجاح • {n} طلب • صافي التوريد {due:,.2f} ج • المرجع {sid}")
+                st.rerun()
+            except Exception as ex: st.error(str(ex))
+    elif user["role"]=="RIDER":
+        st.info("👀 العرض متاح لك، لكن تنفيذ التصفية النقدية للطيار صلاحية المالك فقط.")
+
 # =========================================================
 # شاشة الطيار
 # =========================================================
@@ -1382,6 +1599,9 @@ def render_rider(user):
     header(f"🛵 {r['name']}","واجهة ميدانية: الطلب الحالي، الملاحة، GPS، والحضور — أقل عدد ممكن من الخطوات.")
     fresh=gps_fresh(r); metric_grid([("الحالة",r["status"],"الأسطول","info"),("طلبات نشطة",int(r["active_orders"]),"حالية","info"),("GPS","🟢 حديث" if fresh else "🟠 غير حديث","آخر تحديث","good" if fresh else "warn"),("المرتب الأساسي",f"{float(r['salary']):,.0f} ج","شهري","good")])
     gps_state=st.session_state.get("gps_status") or {}
+    sound_cols=st.columns([1,1,2])
+    if sound_cols[0].button("🔔 صوت التنبيهات" if not st.session_state.get("sound_enabled",False) else "🔔 الصوت مفعل",use_container_width=True):
+        st.session_state.sound_enabled=not st.session_state.get("sound_enabled",False); st.rerun()
     gps_hint="إذا كان الإذن مرفوضاً: من إعدادات المتصفح > أذونات الموقع > السماح لهذا الموقع، ثم أعد تحميل الصفحة." if gps_state.get("code")==1 else "اضغط «تشغيل موقعي» داخل الخريطة. أول مرة سيطلب المتصفح إذن الموقع."
     st.markdown(f'<div class="gps-panel"><div class="gps-title">📍 تتبع الموقع</div><div class="gps-sub">{gps_hint}<br>يُطلب إذن الموقع من الهاتف عند فتح الخريطة. بعد السماح، تُرسل النقاط بدقة مناسبة وبمعدل ذكي لتقليل استهلاك البطارية والاتصال.</div></div>',unsafe_allow_html=True)
     st.markdown('<div class="section-title">🗺️ خريطتك ومسار المهمة</div>',unsafe_allow_html=True)
@@ -1428,10 +1648,10 @@ def render_rider(user):
 # =========================================================
 def nav_menu(user):
     role=user["role"]
-    if role=="OWNER": return [("الرئيسية","dashboard"),("الطلبات","orders"),("🗺️ الخريطة الحية","map"),("🧭 مركز الملاحة","navigation"),("الطيارون","riders"),("المطاعم والفروع","restaurants"),("الحضور والساعات","attendance"),("💰 القبض والمرتبات","payroll"),("التسويات والخزينة","settlements"),("التحليل والأداء","analysis"),("المستخدمون","users"),("الإعدادات والأدوات","tools")]
+    if role=="OWNER": return [("الرئيسية","dashboard"),("الطلبات","orders"),("🗺️ الخريطة الحية","map"),("🧭 مركز الملاحة","navigation"),("الطيارون","riders"),("💳 حساب الطيار","rider_wallet"),("المطاعم والفروع","restaurants"),("الحضور والساعات","attendance"),("💰 القبض والمرتبات","payroll"),("التسويات والخزينة","settlements"),("التحليل والأداء","analysis"),("المستخدمون","users"),("الإعدادات والأدوات","tools")]
     if role=="DISPATCHER": return [("الرئيسية","dashboard"),("الطلبات","orders"),("🗺️ الخريطة الحية","map"),("الطيارون","riders"),("المطاعم والفروع","restaurants")]
     if role=="ACCOUNTANT": return [("الرئيسية","dashboard"),("الطلبات","orders"),("🗺️ الخريطة الحية","map"),("الحضور والساعات","attendance"),("💰 القبض والمرتبات","payroll"),("التسويات والخزينة","settlements"),("التحليل والأداء","analysis"),("الأدوات","tools")]
-    if role=="RIDER": return [("مهمتي الآن","rider"),("🗺️ خريطتي","map"),("الحضور والساعات","attendance")]
+    if role=="RIDER": return [("مهمتي الآن","rider"),("🗺️ خريطتي","map"),("💳 حسابي المالي","rider_wallet"),("الحضور والساعات","attendance")]
     return [("الرئيسية","dashboard"),("طلبات المطعم","orders"),("🗺️ خريطة المطعم","map")]
 
 
@@ -1476,6 +1696,7 @@ if "user" not in st.session_state:
 base_user=st.session_state.user
 user=effective_user()
 top_navigation(user)
+live_notifications_fragment(user)
 page=st.session_state.get("page",nav_menu(user)[0][1])
 try:
     if page=="dashboard": render_dashboard(user)
@@ -1483,6 +1704,7 @@ try:
     elif page=="map": render_live_map(user)
     elif page=="navigation": render_navigation_center(user)
     elif page=="riders": render_riders(user)
+    elif page=="rider_wallet": render_rider_wallet(user)
     elif page=="restaurants": render_restaurants(user)
     elif page=="attendance": render_attendance(user)
     elif page=="payroll": render_payroll(user)
