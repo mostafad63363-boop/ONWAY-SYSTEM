@@ -13,11 +13,11 @@ from pathlib import Path
 from urllib.parse import quote
 from urllib.request import Request, urlopen
 
-APP_NAME = "oN way Delivery"
+APP_NAME = "ONWAY Operations Cockpit"
 DB_PATH = Path("onway_delivery.db")
 
 st.set_page_config(
-    page_title=f"{APP_NAME} | غرفة العمليات",
+    page_title=f"{APP_NAME}",
     page_icon="🧡",
     layout="wide",
     initial_sidebar_state="collapsed",
@@ -30,66 +30,62 @@ st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap');
 :root{
-  --brand:#FF5A00;--brand-hover:#E04D00;--brand-light:#FFF0E5;
-  --page:#F8F9FA;--card:#FFFFFF;--ink:#1F2937;--muted:#6B7280;--line:#E5E7EB;
-  --good:#00B368;--good-light:#E5F7ED;--warn:#FFB020;--warn-light:#FFF7E6;
-  --danger:#FF3B30;--danger-light:#FFEBEA;--info:#007AFF;--info-light:#EAF3FF;
-  --shadow:0 4px 12px rgba(0,0,0,.05);--shadow-hover:0 8px 24px rgba(255,90,0,.15);
-  --radius:16px;--radius-btn:14px;
+ --bg:#080A0D; --surface:#0F1217; --surface2:#141922; --surface3:#191E27;
+ --text:#F6F7F9; --muted:#9AA4B2; --soft:#C8CED6; --line:#242B35;
+ --brand:#FF5A00; --brand2:#FF7A33; --brandSoft:rgba(255,90,0,.13);
+ --good:#00C27A; --goodSoft:rgba(0,194,122,.13);
+ --warn:#FFB020; --warnSoft:rgba(255,176,32,.13);
+ --danger:#FF4D4D; --dangerSoft:rgba(255,77,77,.13);
+ --info:#4DA3FF; --infoSoft:rgba(77,163,255,.13);
+ --shadow:0 12px 34px rgba(0,0,0,.24); --shadowBrand:0 12px 30px rgba(255,90,0,.18);
+ --r:18px; --r2:13px;
 }
 html,body,[class*="css"]{font-family:'Cairo',sans-serif!important;direction:rtl;text-align:right}
+body{background:var(--bg)!important;color:var(--text)!important}
 *,*:before,*:after{box-sizing:border-box}
-[data-testid="stAppViewContainer"]{background:linear-gradient(180deg,#fbfcfd 0%,var(--page) 100%)}
-[data-testid="stHeader"]{background:rgba(248,249,250,.78);backdrop-filter:blur(10px)}
-[data-testid="stDecoration"],#MainMenu,footer{display:none}
-.block-container{max-width:1450px;padding:.7rem .8rem 5rem}
-[data-testid="stSidebar"]{background:var(--card);border-left:1px solid var(--line);box-shadow:var(--shadow)}
-[data-testid="stSidebar"] *{color:var(--ink)!important}
-[data-testid="stSidebar"] [data-testid="stRadio"] label{padding:.72rem .82rem!important;border-radius:12px!important;margin:.16rem 0!important;font-size:.88rem!important;font-weight:800!important;transition:.18s}
-[data-testid="stSidebar"] [data-testid="stRadio"] label:hover{background:var(--brand-light);color:var(--brand)!important}
-[data-testid="stSidebar"] [data-testid="stRadio"] label[data-checked="true"]{background:var(--brand-light);color:var(--brand)!important;border-right:4px solid var(--brand)}
-.sidebar-title{font-size:1.2rem;font-weight:900;text-align:center;margin:.5rem 0 .1rem}.sidebar-sub{font-size:.7rem!important;color:var(--muted)!important;text-align:center;margin-bottom:1rem}
-.app-topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;background:rgba(255,255,255,.93);border:1px solid var(--line);border-radius:var(--radius);padding:10px 13px;margin-bottom:12px;box-shadow:var(--shadow);backdrop-filter:blur(10px)}
-.app-brand{display:flex;align-items:center;gap:10px;font-size:1rem;font-weight:900;color:var(--ink)}
-.app-brand-mark{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:var(--brand);color:#fff;font-size:1.15rem;box-shadow:var(--shadow-hover)}
-.user-chip{display:flex;align-items:center;gap:8px;background:var(--page);border:1px solid var(--line);border-radius:999px;padding:6px 11px;color:var(--ink);font-size:.72rem;font-weight:800}.user-dot{width:9px;height:9px;border-radius:50%;background:var(--good);box-shadow:0 0 0 4px rgba(0,179,104,.10)}
-.onway-hero{background:linear-gradient(135deg,#fff 0%,#fff9f5 65%,var(--brand-light) 100%);border:1px solid var(--line);border-right:5px solid var(--brand);border-radius:var(--radius);padding:20px 22px;margin-bottom:14px;box-shadow:var(--shadow)}
-.onway-hero h1{margin:0;color:var(--ink);font-size:1.6rem;font-weight:900;line-height:1.2}.onway-hero p{margin:.45rem 0 0;color:var(--muted);font-size:.82rem;line-height:1.7}
-.metric-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin-bottom:15px}.metric{position:relative;overflow:hidden;background:#fff;border:1px solid var(--line);border-radius:15px;padding:14px 13px;box-shadow:var(--shadow);min-height:92px}.metric:before{content:"";position:absolute;right:0;top:0;width:4px;height:100%;background:var(--brand)}.metric.good:before{background:var(--good)}.metric.warn:before{background:var(--warn)}.metric.info:before{background:var(--info)}.metric.danger:before{background:var(--danger)}
-.metric .v{font-size:1.3rem;font-weight:900;color:var(--ink);line-height:1.15}.metric .l{font-size:.71rem;font-weight:800;color:#475467;margin-top:5px}.metric .s{font-size:.61rem;color:var(--muted);margin-top:2px}
-.card,.panel{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:14px;box-shadow:var(--shadow);margin-bottom:12px}.card-title{font-size:.93rem;font-weight:900;color:var(--ink);margin-bottom:4px}.card-sub{font-size:.69rem;color:var(--muted);line-height:1.65}
-.section-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin:14px 0 8px}.section-title{font-size:1rem;font-weight:900;color:var(--ink);margin:0}.section-sub{font-size:.68rem;color:var(--muted);line-height:1.6;margin-top:2px}
-.status-pill{display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:.28rem .62rem;font-size:.66rem;font-weight:900}.status-green{background:var(--good-light);color:#067647}.status-blue{background:var(--info-light);color:#175cd3}.status-amber{background:var(--warn-light);color:#B54708}.status-red{background:var(--danger-light);color:#B42318}.status-soft{background:#F2F4F7;color:#344054}
-.stButton>button,.stDownloadButton>button,.stLinkButton>a{min-height:46px!important;border-radius:var(--radius-btn)!important;border:1px solid var(--line)!important;font-weight:800!important;font-size:.82rem!important;box-shadow:none!important;transition:.15s!important}
-.stButton>button[kind="primary"]{background:var(--brand)!important;color:#fff!important;border-color:var(--brand)!important}.stButton>button:hover{transform:translateY(-1px);box-shadow:var(--shadow-hover)!important}
-.stTextInput input,.stNumberInput input,.stTextArea textarea,.stDateInput input{min-height:46px!important;border-radius:12px!important;border:1px solid #D9DEE7!important;background:#fff!important;font-size:15px!important}
-[data-baseweb="select"]>div{min-height:46px!important;border-radius:12px!important;border-color:#D9DEE7!important;background:#fff!important;color:#1F2937!important}[data-baseweb="select"] *{color:#1F2937!important}label{font-size:.72rem!important;font-weight:800!important;color:#344054!important}
-[data-testid="stForm"]{border:1px solid var(--line)!important;border-radius:var(--radius)!important;padding:12px!important;background:#fff!important;box-shadow:var(--shadow)!important}
-[data-testid="stExpander"]{border:1px solid var(--line);border-radius:14px;background:#fff;overflow:hidden}.stAlert{border-radius:13px!important}[data-testid="stDataFrame"]{border:1px solid var(--line);border-radius:13px;overflow:hidden;background:#fff}
-.map-shell{border:1px solid var(--line);border-radius:18px;overflow:hidden;background:#fff;box-shadow:var(--shadow);padding:5px}
-.quick-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin-bottom:14px}.quick-card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px;text-align:center;box-shadow:var(--shadow);font-weight:900}
-.rider-action button{min-height:62px!important;font-size:1rem!important}
-.highlight{background:linear-gradient(135deg,#fff7f0,#fff);border:1px solid #FFD4BC;border-right:4px solid var(--brand);border-radius:14px;padding:12px}
-
-/* V6 usability overrides: stronger contrast + compact/collapsible navigation */
-[data-testid="stSidebar"]{background:#FFFFFF!important;color:#1F2937!important}
-[data-testid="stSidebar"] [data-testid="stMarkdownContainer"], [data-testid="stSidebar"] label, [data-testid="stSidebar"] p, [data-testid="stSidebar"] span{color:#1F2937!important}
-[data-testid="stSidebar"] button{color:#1F2937!important}
-[data-testid="stSidebar"] [role="radiogroup"] label{background:#fff!important;color:#1F2937!important;border:1px solid transparent!important}
-[data-testid="stSidebar"] [role="radiogroup"] label:hover{background:#FFF0E5!important;color:#FF5A00!important}
-[data-testid="stSidebar"] [role="radiogroup"] label:has(input:checked){background:#FFF0E5!important;color:#C74300!important;border-right:4px solid #FF5A00!important}
-.stButton>button,.stDownloadButton>button,.stLinkButton>a{color:#1F2937!important;background:#FFFFFF!important}
-.stButton>button[kind="primary"]{color:#FFFFFF!important;background:#FF5A00!important}
-.stButton>button:disabled{color:#98A2B3!important;background:#F2F4F7!important}
-[data-testid="stDataFrame"] *{color:#1F2937}
-.workspace-switch{background:#fff;border:1px solid #E5E7EB;border-radius:16px;padding:10px 12px;box-shadow:0 4px 12px rgba(0,0,0,.04);margin-bottom:12px}
-.workspace-label{font-size:.72rem;font-weight:900;color:#475467;margin-bottom:7px}
-.gps-panel{background:linear-gradient(135deg,#F0FFF7,#FFFFFF);border:1px solid #B7E6CC;border-radius:16px;padding:12px 14px;margin-bottom:12px}
-.gps-title{font-size:.92rem;font-weight:900;color:#067647}
-.gps-sub{font-size:.68rem;color:#475467;line-height:1.7}
-@media(max-width:700px){.workspace-switch{padding:9px}.workspace-label{font-size:.68rem}}
+[data-testid="stAppViewContainer"]{background:radial-gradient(circle at 15% 0%,rgba(255,90,0,.07),transparent 28%),linear-gradient(180deg,#080A0D 0%,#0A0D11 100%)!important}
+[data-testid="stHeader"]{background:rgba(8,10,13,.70)!important;backdrop-filter:blur(12px)}
+[data-testid="stDecoration"],#MainMenu,footer{display:none!important}
+.block-container{max-width:1500px;padding:.65rem .8rem 5rem}
+[data-testid="stSidebar"]{background:#0C0F13!important;border-left:1px solid var(--line)!important;box-shadow:var(--shadow)}
+[data-testid="stSidebar"] *{color:var(--soft)!important}
+[data-testid="stSidebar"] [role="radiogroup"] label{padding:.75rem .82rem!important;border-radius:12px!important;margin:.15rem 0!important;background:transparent!important;border:1px solid transparent!important;font-weight:800!important;font-size:.82rem!important}
+[data-testid="stSidebar"] [role="radiogroup"] label:hover{background:var(--brandSoft)!important;color:#FF9B68!important}
+[data-testid="stSidebar"] [role="radiogroup"] label:has(input:checked){background:var(--brandSoft)!important;color:#FF7A33!important;border-right:4px solid var(--brand)!important}
+.sidebar-title{font-size:1.15rem;font-weight:900;color:#fff;text-align:center;margin:.45rem 0 .05rem}.sidebar-sub{font-size:.66rem!important;color:var(--muted)!important;text-align:center;margin-bottom:1rem}
+.app-topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;background:rgba(15,18,23,.94);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;margin-bottom:11px;box-shadow:var(--shadow);backdrop-filter:blur(14px)}
+.app-brand{display:flex;align-items:center;gap:10px;color:#fff;font-size:.98rem;font-weight:900}.app-brand-mark{width:40px;height:40px;border-radius:13px;display:grid;place-items:center;background:var(--brand);color:#fff;box-shadow:var(--shadowBrand);font-size:1.12rem}
+.user-chip{display:flex;align-items:center;gap:8px;background:#12161D;border:1px solid #2A313C;border-radius:999px;padding:6px 10px;color:var(--soft);font-size:.72rem;font-weight:800}.user-dot{width:8px;height:8px;border-radius:50%;background:var(--good);box-shadow:0 0 0 4px rgba(0,194,122,.10)}
+.onway-hero{background:linear-gradient(135deg,#11151B 0%,#0E1116 60%,#17110D 100%);border:1px solid var(--line);border-right:4px solid var(--brand);border-radius:var(--r);padding:16px 18px;margin-bottom:12px;box-shadow:var(--shadow)}
+.onway-hero h1{margin:0;color:#fff;font-size:1.42rem;font-weight:900;line-height:1.2}.onway-hero p{margin:.4rem 0 0;color:var(--muted);font-size:.76rem;line-height:1.7}
+.metric-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:9px;margin-bottom:12px}.metric{position:relative;overflow:hidden;background:linear-gradient(180deg,#11151B,#0E1116);border:1px solid var(--line);border-radius:15px;padding:13px 12px;box-shadow:var(--shadow);min-height:87px}.metric:before{content:"";position:absolute;right:0;top:0;width:4px;height:100%;background:var(--brand)}.metric.good:before{background:var(--good)}.metric.warn:before{background:var(--warn)}.metric.info:before{background:var(--info)}.metric.danger:before{background:var(--danger)}
+.metric .v{font-size:1.28rem;font-weight:900;color:#fff;line-height:1.15}.metric .l{font-size:.68rem;font-weight:800;color:#D2D7DE;margin-top:5px}.metric .s{font-size:.58rem;color:var(--muted);margin-top:2px}
+.card,.panel{background:linear-gradient(180deg,#10141A,#0D1015);border:1px solid var(--line);border-radius:var(--r);padding:14px;box-shadow:var(--shadow);margin-bottom:11px;color:var(--text)}
+.card-title,.section-title{font-size:.92rem;font-weight:900;color:#fff;margin-bottom:4px}.card-sub,.section-sub{font-size:.66rem;color:var(--muted);line-height:1.65}
+.section-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin:13px 0 8px}
+.status-pill{display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:.27rem .62rem;font-size:.63rem;font-weight:900}.status-green{background:var(--goodSoft);color:#6DE8BA}.status-blue{background:var(--infoSoft);color:#8FC6FF}.status-amber{background:var(--warnSoft);color:#FFD06B}.status-red{background:var(--dangerSoft);color:#FF9E9E}.status-soft{background:#171C24;color:#C8CED6}
+.stButton>button,.stDownloadButton>button,.stLinkButton>a{min-height:46px!important;border-radius:13px!important;border:1px solid #2A313C!important;font-weight:800!important;font-size:.81rem!important;background:#141922!important;color:#F6F7F9!important;box-shadow:none!important;transition:.14s ease!important}
+.stButton>button:hover,.stDownloadButton>button:hover,.stLinkButton>a:hover{transform:translateY(-1px);border-color:#4A5564!important;box-shadow:0 8px 22px rgba(0,0,0,.20)!important}
+.stButton>button[kind="primary"]{background:linear-gradient(180deg,var(--brand2),var(--brand))!important;color:#fff!important;border-color:var(--brand)!important;box-shadow:var(--shadowBrand)!important}
+.stButton>button:disabled{background:#11151B!important;color:#677181!important;border-color:#202631!important}
+.stTextInput input,.stNumberInput input,.stTextArea textarea,.stDateInput input{min-height:47px!important;border-radius:12px!important;border:1px solid #2A313C!important;background:#11151B!important;color:#F6F7F9!important;font-size:15px!important}
+.stTextInput input::placeholder,.stTextArea textarea::placeholder{color:#6F7A88!important}
+[data-baseweb="select"]>div{min-height:47px!important;border-radius:12px!important;border-color:#2A313C!important;background:#11151B!important;color:#F6F7F9!important}[data-baseweb="select"] *{color:#F6F7F9!important}
+label{font-size:.71rem!important;font-weight:800!important;color:#CDD3DB!important}
+[data-testid="stForm"]{border:1px solid var(--line)!important;border-radius:var(--r)!important;padding:12px!important;background:#0F1217!important;box-shadow:var(--shadow)!important}
+[data-testid="stExpander"]{border:1px solid var(--line)!important;border-radius:14px!important;background:#0F1217!important;overflow:hidden}[data-testid="stExpander"] summary{color:#F6F7F9!important;font-weight:800!important}
+.stAlert{border-radius:13px!important;background:#12161D!important;color:#E8ECF1!important}.stSuccess{background:var(--goodSoft)!important}.stWarning{background:var(--warnSoft)!important}.stError{background:var(--dangerSoft)!important}.stInfo{background:var(--infoSoft)!important}
+[data-testid="stDataFrame"]{border:1px solid var(--line);border-radius:13px;overflow:hidden;background:#11151B}
+[data-testid="stDataFrame"] *{color:#F0F2F5!important}
+[data-testid="stMetric"]{background:#11151B;border:1px solid var(--line);border-radius:14px;padding:8px}
+.highlight{background:linear-gradient(135deg,rgba(255,90,0,.13),rgba(255,90,0,.03));border:1px solid rgba(255,90,0,.28);border-right:4px solid var(--brand);border-radius:14px;padding:12px;color:#fff}
+.workspace-switch{background:#0F1217;border:1px solid var(--line);border-radius:15px;padding:8px 10px;box-shadow:var(--shadow);margin-bottom:10px}.workspace-label{font-size:.66rem;font-weight:900;color:#9FA8B5;margin-bottom:6px}
+.gps-panel{background:linear-gradient(135deg,rgba(0,194,122,.12),rgba(15,18,23,.95));border:1px solid rgba(0,194,122,.35);border-radius:15px;padding:11px 13px;margin-bottom:10px}.gps-title{font-size:.88rem;font-weight:900;color:#70E7B7}.gps-sub{font-size:.65rem;color:#ADB6C2;line-height:1.75}
+.rider-action button{min-height:66px!important;font-size:1rem!important;border-radius:16px!important}
+.quick-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:11px}.quick-card{background:#11151B;border:1px solid var(--line);border-radius:14px;padding:10px;text-align:center;font-weight:900;color:#fff;box-shadow:var(--shadow)}
+.cockpit-alert{padding:10px 12px;border-radius:13px;margin-bottom:7px;border:1px solid var(--line);background:#11151B}.cockpit-alert b{color:#fff}.cockpit-alert span{color:var(--muted);font-size:.66rem}
 @media(max-width:1100px){.metric-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.quick-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:700px){.block-container{padding:.4rem .48rem 5rem}.app-topbar{padding:8px 9px;border-radius:14px}.app-brand{font-size:.82rem}.app-brand-mark{width:34px;height:34px;border-radius:10px}.user-chip{font-size:.59rem;padding:5px 7px;max-width:48%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.onway-hero{padding:14px;border-radius:15px}.onway-hero h1{font-size:1.2rem}.onway-hero p{font-size:.68rem}.metric-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.metric{min-height:79px;padding:10px}.metric .v{font-size:1.05rem}.metric .l{font-size:.61rem}.metric .s{font-size:.53rem}.quick-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.stButton>button,.stDownloadButton>button,.stLinkButton>a{min-height:51px!important;font-size:.84rem!important}.stTextInput input,.stNumberInput input,.stTextArea textarea,[data-baseweb="select"]>div{min-height:50px!important;font-size:16px!important}.rider-action button{min-height:68px!important;font-size:1.02rem!important}.section-title{font-size:.91rem}.section-sub{font-size:.64rem}}
+@media(max-width:700px){.block-container{padding:.35rem .42rem 4.8rem}.app-topbar{padding:8px;border-radius:14px}.app-brand{font-size:.79rem}.app-brand-mark{width:34px;height:34px;border-radius:10px;font-size:1rem}.user-chip{font-size:.58rem;padding:5px 7px;max-width:47%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.onway-hero{padding:13px;border-radius:14px}.onway-hero h1{font-size:1.12rem}.onway-hero p{font-size:.64rem}.metric-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.metric{min-height:76px;padding:9px}.metric .v{font-size:1.02rem}.metric .l{font-size:.59rem}.metric .s{font-size:.50rem}.quick-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.stButton>button,.stDownloadButton>button,.stLinkButton>a{min-height:50px!important;font-size:.78rem!important}.stTextInput input,.stNumberInput input,.stTextArea textarea,[data-baseweb="select"]>div{min-height:51px!important;font-size:16px!important}.rider-action button{min-height:70px!important;font-size:1rem!important}.card,.panel{padding:11px;border-radius:15px}.section-title{font-size:.87rem}}
 </style>
 """, unsafe_allow_html=True)
 
@@ -658,7 +654,7 @@ try:
           mapEl.__owWatch=null;
           mapEl.__owRouteKey='';
           L.control.zoom({position:'bottomleft'}).addTo(map);
-          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap contributors'}).addTo(map);
+          L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{maxZoom:20,attribution:'© OpenStreetMap contributors © CARTO',subdomains:'abcd'}).addTo(map);
         } else {
           const centerKey=JSON.stringify(cfg.center||[31.2001,29.9187]);
           if(centerKey!==mapEl.__owCenter){
@@ -945,9 +941,9 @@ def map_points_for(user):
 
 
 @st.fragment(run_every="5s")
-def live_map_fragment(user, navigation=False):
+def live_map_fragment(user, navigation=False, route=None):
     points=map_points_for(user)
-    result=mount_map(points,center=[31.2001,29.9187],zoom=12,clickable=navigation,geolocation=navigation or user["role"]=="RIDER",key="live_map_navigation" if navigation else f"live_map_{user['role']}")
+    result=mount_map(points,center=[31.2001,29.9187],zoom=12,clickable=navigation,geolocation=navigation or user["role"]=="RIDER",route=route,key="live_map_navigation" if navigation else f"live_map_{user['role']}")
     if result:
         mc=getattr(result,"map_click",None); gps=getattr(result,"gps",None); rm=getattr(result,"route_meta",None)
         if mc:
@@ -1042,25 +1038,50 @@ def render_dashboard(user):
     if user["role"]=="RIDER": return render_rider(user)
     if user["role"]=="RESTAURANT":
         rs=df("SELECT * FROM orders WHERE restaurant_id=? ORDER BY created_at DESC LIMIT 100",(user["ref_id"],))
-        header("لوحة المطعم","أوردراتك، الفروع، حالة التنفيذ، ومديونية الآجل في شاشة بسيطة.")
+        header("لوحة المطعم","حالة الطلبات والحساب في مساحة بسيطة.")
         active=int(rs["status"].isin(["جديد","تم التعيين","تم القبول","تم الاستلام","في الطريق"]).sum()) if not rs.empty else 0
         done=int((rs["status"]=="تم التسليم").sum()) if not rs.empty else 0
         due=float(df("SELECT COALESCE(SUM(o.delivery_fee-COALESCE((SELECT SUM(si.amount) FROM settlement_items si WHERE si.order_id=o.id),0)),0) x FROM orders o WHERE o.restaurant_id=? AND o.billing_mode='آجل' AND o.status='تم التسليم'",(user["ref_id"],))["x"][0])
         metric_grid([("إجمالي الطلبات",len(rs),"آخر السجلات","info"),("قيد التنفيذ",active,"نشطة","info"),("تم التسليم",done,"مكتملة","good"),("آجل مستحق",f"{due:,.2f} ج","جاهز للتسوية","warn")])
-        st.markdown('<div class="section-title">🗺️ خريطة المطعم</div>',unsafe_allow_html=True); live_map_fragment(user)
+        st.markdown('<div class="section-title">🗺️ حركة طلبات المطعم</div>',unsafe_allow_html=True); live_map_fragment(user)
         if not rs.empty: st.dataframe(rs[["order_no","status","billing_mode","delivery_address","delivery_fee","created_at"]].rename(columns={"order_no":"الطلب","status":"الحالة","billing_mode":"التحصيل","delivery_address":"العنوان","delivery_fee":"خدمة التوصيل","created_at":"الوقت"}),use_container_width=True,hide_index=True)
         return
-    d=dashboard_data(); header("غرفة العمليات","قرار أسرع، رؤية أوضح، وحساب منفصل عن شاشة الحركة.")
-    payroll=0
-    period=month_key(); riders=df("SELECT id FROM riders")
-    if not riders.empty: payroll=sum(payroll_summary(r["id"],period)["remaining"] for _,r in riders.iterrows())
-    metric_grid([("طلبات اليوم",d["total"],f"كاش {d['cash']} • آجل {d['credit']}","info"),("قيد التنفيذ",d["active"],"في الميدان","info"),("تم التسليم",d["done"],"اليوم","good"),("خدمة التوصيل",f"{d['service']:,.2f} ج","استحقاق اليوم","good"),("آجل مستحق",f"{d['credit_due']:,.2f} ج","يحتاج تحصيل","warn"),("الخزينة",f"{d['treasury']:,.2f} ج",f"دخل اليوم {cash_receipts_today():,.2f} ج","good")])
-    if d["overdue"]: st.warning(f"⚠️ يوجد {d['overdue']} طلبات متأخرة عن الوقت المتوقع.")
-    if user["role"]=="OWNER": st.info(f"💰 الرواتب المتبقية لهذا الشهر ({period}): {payroll:,.2f} ج")
-    if user["role"] in ("OWNER","DISPATCHER","ACCOUNTANT"):
-        st.markdown('<div class="section-title">🗺️ الخريطة الحية</div>',unsafe_allow_html=True); live_map_fragment(user)
-    o=df("SELECT o.order_no,r.name restaurant,b.name branch,o.status,o.billing_mode,COALESCE(ry.name,'—') rider,o.delivery_address,o.distance_km,o.rider_commission,o.created_at FROM orders o JOIN restaurants r ON r.id=o.restaurant_id JOIN branches b ON b.id=o.branch_id LEFT JOIN riders ry ON ry.id=o.rider_id ORDER BY o.created_at DESC LIMIT 40")
-    if not o.empty: st.dataframe(o.rename(columns={"order_no":"الطلب","restaurant":"المطعم","branch":"الفرع","status":"الحالة","billing_mode":"التحصيل","rider":"الطيار","delivery_address":"العنوان","distance_km":"كم","rider_commission":"العمولة","created_at":"الوقت"}),use_container_width=True,hide_index=True)
+
+    d=dashboard_data(); header("غرفة العمليات","هذه الشاشة تقول لك أين تحتاج أن تتدخل الآن — لا تحتاج البحث عن المعلومة.")
+    period=month_key(); payroll=0.0; riders=df("SELECT id FROM riders")
+    if not riders.empty:
+        for _,x in riders.iterrows(): payroll += payroll_summary(x["id"],period)["remaining"]
+    metric_grid([("طلبات اليوم",d["total"],f"كاش {d['cash']} • آجل {d['credit']}","info"),("قيد التنفيذ",d["active"],"في الميدان","info"),("تحتاج تدخل",d["overdue"],"متأخرة","danger" if d["overdue"] else "good"),("تم التسليم",d["done"],"اليوم","good"),("آجل مستحق",f"{d['credit_due']:,.0f} ج","يحتاج تحصيل","warn"),("الخزينة",f"{d['treasury']:,.0f} ج",f"دخل اليوم {cash_receipts_today():,.0f} ج","good")])
+
+    # إجراءات سريعة للمالك والديسباتشر
+    if user["role"] in ("OWNER","DISPATCHER"):
+        q1,q2,q3,q4=st.columns(4,gap="small")
+        if q1.button("＋ طلب جديد",type="primary",use_container_width=True): st.session_state.page="orders"; st.rerun()
+        if q2.button("🚴 تعيين / تغيير طيار",use_container_width=True): st.session_state.page="orders"; st.rerun()
+        if q3.button("🗺️ افتح الخريطة",use_container_width=True): st.session_state.page="map"; st.rerun()
+        if q4.button("🧭 الملاحة",use_container_width=True) and user["role"]=="OWNER": st.session_state.page="navigation"; st.rerun()
+
+    if d["overdue"]:
+        st.markdown(f'<div class="cockpit-alert" style="border-color:rgba(255,77,77,.35);background:rgba(255,77,77,.07)"><b>🔴 {d["overdue"]} طلب يحتاج تدخلك الآن</b><br><span>ابدأ من الطلبات أو الخريطة لتحديد الطيار ومعالجة التأخير.</span></div>',unsafe_allow_html=True)
+
+    left,right=st.columns([1.55,1],gap="small")
+    with left:
+        st.markdown('<div class="section-title">🗺️ الخريطة الحية</div><div class="section-sub">موقع الطيارين والطلبات النشطة • التحديث كل 5 ثوانٍ</div>',unsafe_allow_html=True)
+        if user["role"] in ("OWNER","DISPATCHER","ACCOUNTANT"): live_map_fragment(user)
+    with right:
+        st.markdown('<div class="section-title">⚡ حالة الأسطول</div><div class="section-sub">ما يهمك الآن فقط</div>',unsafe_allow_html=True)
+        rs=df("SELECT name,status,active_orders,last_gps_at FROM riders WHERE status!='غير نشط' ORDER BY active_orders DESC,name")
+        if rs.empty: st.info("لا يوجد طيارون نشطون.")
+        else:
+            for _,r in rs.head(10).iterrows():
+                fresh=gps_fresh(r.to_dict()); color="status-green" if fresh and r["status"]!="مشغول" else ("status-amber" if r["status"]!="غير نشط" else "status-red")
+                gps="🟢 GPS" if fresh else "🟠 GPS"; st.markdown(f'<div class="cockpit-alert"><b>🚴 {r["name"]}</b> &nbsp; {badge(r["status"],"green" if r["status"]!="غير نشط" else "red")}<br><span>{gps} • {int(r["active_orders"])} طلبات • {r["last_gps_at"] or "لم يسجل موقعاً"}</span></div>',unsafe_allow_html=True)
+
+    st.markdown('<div class="section-title">📦 الطلبات النشطة</div><div class="section-sub">الطلبات التي تحتاج متابعة أو إجراء</div>',unsafe_allow_html=True)
+    o=df("SELECT o.order_no,r.name restaurant,b.name branch,o.status,o.billing_mode,COALESCE(ry.name,'—') rider,o.delivery_address,o.distance_km,o.rider_commission,o.created_at FROM orders o JOIN restaurants r ON r.id=o.restaurant_id JOIN branches b ON b.id=o.branch_id LEFT JOIN riders ry ON ry.id=o.rider_id WHERE o.status NOT IN ('تم التسليم','ملغى') ORDER BY o.created_at DESC LIMIT 60")
+    if not o.empty:
+        st.dataframe(o.rename(columns={"order_no":"الطلب","restaurant":"المطعم","branch":"الفرع","status":"الحالة","billing_mode":"التحصيل","rider":"الطيار","delivery_address":"العنوان","distance_km":"كم","rider_commission":"العمولة","created_at":"الوقت"}),use_container_width=True,hide_index=True)
+    else: st.success("✅ لا توجد طلبات مفتوحة الآن.")
 
 
 # =========================================================
@@ -1068,7 +1089,7 @@ def render_dashboard(user):
 # =========================================================
 def render_orders(user):
     header("الطلبات","إنشاء، تعيين، متابعة، تعديل، وإغلاق الطلب بدون لمس الحسابات يدوياً.")
-    can_create=user["role"] in ("OWNER","DISPATCHER","RESTAURANT")
+    can_create=user["role"] in ("OWNER","DISPATCHER")
     if can_create:
         with st.expander("＋ إنشاء طلب",expanded=False):
             if user["role"]=="RESTAURANT":
@@ -1133,7 +1154,7 @@ def render_orders(user):
             except Exception as ex:
                 st.error(str(ex))
     allowed=transitions(o["status"])
-    if allowed and user["role"] in ("OWNER","DISPATCHER","RIDER","RESTAURANT"):
+    if allowed and user["role"] in ("OWNER","DISPATCHER","RIDER"):
         actions=allowed
         action=st.selectbox("الإجراء التالي",actions,key=f"next_{o['id']}")
         if st.button("تنفيذ الإجراء",type="primary",use_container_width=True):
@@ -1411,9 +1432,20 @@ def render_rider(user):
     fresh=gps_fresh(r); metric_grid([("الحالة",r["status"],"الأسطول","info"),("طلبات نشطة",int(r["active_orders"]),"حالية","info"),("GPS","🟢 حديث" if fresh else "🟠 غير حديث","آخر تحديث","good" if fresh else "warn"),("المرتب الأساسي",f"{float(r['salary']):,.0f} ج","شهري","good")])
     gps_state=st.session_state.get("gps_status") or {}
     gps_hint="إذا كان الإذن مرفوضاً: من إعدادات المتصفح > أذونات الموقع > السماح لهذا الموقع، ثم أعد تحميل الصفحة." if gps_state.get("code")==1 else "اضغط «تشغيل موقعي» داخل الخريطة. أول مرة سيطلب المتصفح إذن الموقع."
-    st.markdown(f'<div class="gps-panel"><div class="gps-title">📍 تتبع الموقع</div><div class="gps-sub">{gps_hint}<br>تُرسل النقاط بعد تحقق من الدقة، وبمعدل ذكي لتقليل استهلاك البطارية والاتصال.</div></div>',unsafe_allow_html=True)
-    st.markdown('<div class="section-title">🗺️ خريطتك</div>',unsafe_allow_html=True); live_map_fragment(user)
-    my=df("SELECT o.*,rs.name restaurant,b.name branch FROM orders o JOIN restaurants rs ON rs.id=o.restaurant_id JOIN branches b ON b.id=o.branch_id WHERE o.rider_id=? AND o.status NOT IN ('تم التسليم','ملغى') ORDER BY o.created_at",(r["id"],))
+    st.markdown(f'<div class="gps-panel"><div class="gps-title">📍 تتبع الموقع</div><div class="gps-sub">{gps_hint}<br>يُطلب إذن الموقع من الهاتف عند فتح الخريطة. بعد السماح، تُرسل النقاط بدقة مناسبة وبمعدل ذكي لتقليل استهلاك البطارية والاتصال.</div></div>',unsafe_allow_html=True)
+    st.markdown('<div class="section-title">🗺️ خريطتك ومسار المهمة</div>',unsafe_allow_html=True)
+    my=df("SELECT o.*,rs.name restaurant,b.name branch,b.lat branch_lat,b.lng branch_lng FROM orders o JOIN restaurants rs ON rs.id=o.restaurant_id JOIN branches b ON b.id=o.branch_id WHERE o.rider_id=? AND o.status NOT IN ('تم التسليم','ملغى') ORDER BY o.created_at",(r["id"],))
+    current_route=None
+    if not my.empty and r.get("last_lat") is not None and r.get("last_lng") is not None:
+        preview=my.iloc[0].to_dict()
+        target=None
+        if preview["status"] in ("جديد","تم التعيين","تم القبول") and preview.get("branch_lat") is not None:
+            target=[float(preview["branch_lat"]),float(preview["branch_lng"])]
+        elif preview.get("delivery_lat") is not None:
+            target=[float(preview["delivery_lat"]),float(preview["delivery_lng"])]
+        if target:
+            current_route={"from":[float(r["last_lat"]),float(r["last_lng"])],"to":target}
+    live_map_fragment(user, route=current_route)
     if my.empty:
         st.success("لا يوجد طلب نشط الآن — أنت جاهز للتوجيه.")
     else:
