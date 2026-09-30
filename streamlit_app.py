@@ -94,47 +94,6 @@ label{font-size:.71rem!important;font-weight:800!important;color:#CDD3DB!importa
 </style>
 """, unsafe_allow_html=True)
 
-# =========================================================
-# ONWAY Mobile Command UI — طبقة عرض إضافية فقط
-# =========================================================
-st.markdown("""
-<style>
-html, body { overflow-x:hidden !important; }
-[data-testid="stAppViewContainer"], [data-testid="stAppViewContainer"] > .main { overflow-x:hidden !important; }
-.block-container { width:100% !important; }
-.ow-mobile-rail{display:flex;gap:7px;align-items:center;overflow-x:auto;scrollbar-width:none;padding:2px 1px 7px;margin:2px 0 10px}
-.ow-mobile-rail::-webkit-scrollbar{display:none}
-.ow-rail-chip{flex:0 0 auto;display:inline-flex;align-items:center;gap:6px;padding:8px 11px;border-radius:999px;border:1px solid #2A313C;background:#11151B;color:#E9EDF2;font:800 11px Cairo,Arial,sans-serif;white-space:nowrap}
-.ow-rail-chip.brand{border-color:rgba(255,90,0,.35);background:rgba(255,90,0,.10);color:#FF9A68}
-.ow-rail-chip.good{border-color:rgba(0,194,122,.30);background:rgba(0,194,122,.09);color:#72E7BB}
-.ow-rail-chip.warn{border-color:rgba(255,176,32,.35);background:rgba(255,176,32,.09);color:#FFD372}
-.ow-command-card{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 12px;border:1px solid #252D38;border-radius:16px;background:linear-gradient(180deg,#12171E,#0E1116);box-shadow:0 8px 26px rgba(0,0,0,.20);margin-bottom:8px}
-.ow-command-card .title{font:900 13px Cairo,Arial,sans-serif;color:#fff}
-.ow-command-card .meta{font:700 10px/1.7 Cairo,Arial,sans-serif;color:#9EA8B5}
-.ow-command-card .value{font:900 14px Cairo,Arial,sans-serif;color:#FF8E56}
-.ow-divider{height:1px;background:linear-gradient(90deg,transparent,#2A313C,transparent);margin:10px 0}
-.ow-field-note{font:700 10px/1.7 Cairo,Arial,sans-serif;color:#98A3B1;background:#0F1318;border:1px solid #242C36;border-radius:12px;padding:9px 11px;margin:8px 0}
-[data-testid="stDataFrame"]{max-width:100%!important;overflow:hidden!important}
-@media(max-width:700px){
-  .block-container{padding:.25rem .38rem 6.5rem!important}
-  .app-topbar{position:sticky;top:2px!important;border-radius:14px!important;padding:8px 9px!important;margin-bottom:7px!important}
-  .app-brand{font-size:.76rem!important}.app-brand-mark{width:32px!important;height:32px!important;border-radius:10px!important}
-  .user-chip{font-size:.55rem!important;max-width:52%!important;padding:5px 7px!important}
-  .onway-hero{padding:11px 12px!important;border-radius:15px!important;margin-bottom:8px!important}
-  .onway-hero h1{font-size:1.02rem!important}.onway-hero p{font-size:.61rem!important;line-height:1.55!important}
-  .metric-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:5px!important;margin-bottom:9px!important}
-  .metric{min-height:72px!important;padding:8px!important;border-radius:14px!important}
-  .metric .v{font-size:1.0rem!important}.metric .l{font-size:.58rem!important}.metric .s{font-size:.48rem!important}
-  .section-title,.card-title{font-size:.83rem!important}.section-sub,.card-sub{font-size:.60rem!important}
-  .stButton>button,.stDownloadButton>button,.stLinkButton>a{min-height:52px!important;font-size:.79rem!important;border-radius:14px!important}
-  label{font-size:.67rem!important}[data-testid="stForm"]{padding:9px!important;border-radius:15px!important}
-  [data-testid="stExpander"]{border-radius:14px!important}
-  .ow-mobile-rail{margin-bottom:7px}.ow-rail-chip{font-size:10px;padding:7px 10px}.ow-command-card{padding:10px;border-radius:14px}
-}
-@media(max-width:380px){.metric .v{font-size:.92rem!important}.metric .l{font-size:.54rem!important}.stButton>button,.stLinkButton>a{font-size:.74rem!important}}
-</style>
-""", unsafe_allow_html=True)
-
 if not hasattr(st, "fragment"):
     def _fragment_fallback(*args, **kwargs):
         if args and callable(args[0]):
@@ -249,19 +208,6 @@ def setup_db():
         if (c.execute("SELECT value FROM settings WHERE key='legacy_ledger_reclass_done'").fetchone() or ["0"])[0] != "1":
             c.execute("UPDATE ledger SET direction='استحقاق' WHERE txn_type='إيراد خدمة توصيل' AND direction='داخل'")
             c.execute("INSERT INTO settings(key,value) VALUES ('legacy_ledger_reclass_done','1') ON CONFLICT(key) DO UPDATE SET value='1'")
-        # فهارس تشغيلية لتحسين الطلبات/الخريطة/الحساب على الهاتف
-        for idx_sql in (
-            "CREATE INDEX IF NOT EXISTS ix_orders_status_created ON orders(status, created_at)",
-            "CREATE INDEX IF NOT EXISTS ix_orders_rider_status ON orders(rider_id, status)",
-            "CREATE INDEX IF NOT EXISTS ix_orders_restaurant_status ON orders(restaurant_id, status)",
-            "CREATE INDEX IF NOT EXISTS ix_orders_delivered ON orders(delivered_at)",
-            "CREATE INDEX IF NOT EXISTS ix_settlement_items_order ON settlement_items(order_id)",
-            "CREATE INDEX IF NOT EXISTS ix_ledger_created_direction ON ledger(created_at, direction)",
-            "CREATE INDEX IF NOT EXISTS ix_gps_rider_time ON gps_log(rider_id, recorded_at)",
-            "CREATE INDEX IF NOT EXISTS ix_attendance_rider_date ON attendance(rider_id, work_date)",
-            "CREATE INDEX IF NOT EXISTS ix_users_email ON users(email)",
-        ):
-            c.execute(idx_sql)
         c.execute("DELETE FROM gps_log WHERE recorded_at<?", ((now_dt() - timedelta(days=7)).strftime("%Y-%m-%d %H:%M:%S"),))
         c.execute("DELETE FROM sessions WHERE expires_at<?", (now_iso(),))
         if (c.execute("SELECT value FROM settings WHERE key='comm_unify_done'").fetchone() or ["0"])[0] != "1":
@@ -590,6 +536,56 @@ def reset_user_pin(user_id, actor):
     with get_conn() as c: c.execute("UPDATE users SET pin_hash=? WHERE id=?", (hash_pin(pin), user_id))
     drop_user_sessions(user_id)
     audit(actor["id"], "reset_pin", "user", user_id, after={"pin_reset": True}); return pin
+
+
+def validate_pin_value(pin, label="PIN"):
+    pin = str(pin or "").strip()
+    if not pin.isdigit() or not 4 <= len(pin) <= 8:
+        raise ValueError(f"{label} يجب أن يكون من 4 إلى 8 أرقام.")
+    return pin
+
+
+def change_own_pin(current_pin, new_pin, actor):
+    """تغيير PIN للمستخدم نفسه بعد التحقق من PIN الحالي. لا تكشف القيمة المخزنة."""
+    if not actor or not actor.get("id"):
+        raise PermissionError("لا يوجد مستخدم مسجل حالياً.")
+    current_pin = validate_pin_value(current_pin, "PIN الحالي")
+    new_pin = validate_pin_value(new_pin, "PIN الجديد")
+    if current_pin == new_pin:
+        raise ValueError("PIN الجديد يجب أن يختلف عن PIN الحالي.")
+    u = one("SELECT * FROM users WHERE id=? AND active=1", (actor["id"],))
+    if not u:
+        raise ValueError("الحساب غير موجود أو غير نشط.")
+    if not verify_pin(current_pin, u["pin_hash"]):
+        raise ValueError("PIN الحالي غير صحيح.")
+    with get_conn() as c:
+        c.execute("UPDATE users SET pin_hash=? WHERE id=?", (hash_pin(new_pin), actor["id"]))
+    # أبقِ جلسة هذا الجهاز فعالة؛ يتم إبطال الجلسات الأخرى فقط.
+    with get_conn() as c:
+        token = st.session_state.get("_token")
+        if token:
+            h = hashlib.sha256(str(token).encode()).hexdigest()
+            c.execute("DELETE FROM sessions WHERE user_id=? AND token_hash!=?", (actor["id"], h))
+        else:
+            c.execute("DELETE FROM sessions WHERE user_id=?", (actor["id"],))
+    audit(actor["id"], "change_own_pin", "user", actor["id"], after={"pin_changed": True})
+    return True
+
+
+def owner_set_user_pin(user_id, new_pin, actor):
+    """تعيين PIN محدد لمستخدم بواسطة المالك فقط."""
+    need_owner(actor, "تعيين PIN لمستخدم آخر صلاحية المالك فقط.")
+    new_pin = validate_pin_value(new_pin, "PIN الجديد")
+    u = one("SELECT id,name,role,active FROM users WHERE id=?", (user_id,))
+    if not u:
+        raise ValueError("المستخدم غير موجود.")
+    if u["id"] == actor.get("id"):
+        raise ValueError("استخدم تغيير PIN الخاص بك بدلاً من تعيين PIN لنفس الحساب.")
+    with get_conn() as c:
+        c.execute("UPDATE users SET pin_hash=? WHERE id=?", (hash_pin(new_pin), user_id))
+    drop_user_sessions(user_id)
+    audit(actor["id"], "set_pin", "user", user_id, after={"pin_set": True})
+    return True
 
 
 # =========================================================
@@ -1008,7 +1004,7 @@ try:
     from streamlit.components.v2 import component as _component
 
     MAP_HTML = """
-    <div id='owroot' dir='rtl' data-role=''>
+    <div id='owroot' dir='rtl'>
       <div id='owsearchbar'>
         <input id='owsearch' autocomplete='off' placeholder='ابحث عن شارع، مطعم، منطقة أو وجهة…' />
         <button id='owmic' aria-label='بحث صوتي'>🎤</button>
@@ -1028,8 +1024,7 @@ try:
     MAP_CSS = """
     @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@500;600;700;800;900&display=swap');
     *{box-sizing:border-box}
-    #owroot{position:relative;width:100%;height:clamp(480px,72svh,820px);min-height:460px;overflow:hidden;border:1px solid #28303a;border-radius:18px;background:#101318;font-family:Cairo,Arial,sans-serif;isolation:isolate}
-    #owroot[data-role='RIDER']{height:clamp(560px,78svh,900px);min-height:520px}
+    #owroot{position:relative;width:100%;height:clamp(460px,70svh,800px);min-height:460px;overflow:hidden;border:1px solid #28303a;border-radius:18px;background:#101318;font-family:Cairo,Arial,sans-serif;isolation:isolate}
     #owmap{position:absolute;inset:0;width:100%;height:100%;background:#20242b}
     .leaflet-container{font-family:Cairo,Arial,sans-serif!important;background:#20242b}
     .leaflet-popup-content{direction:rtl;line-height:1.75;font-size:12px}
@@ -1046,7 +1041,7 @@ try:
     #owbadge{display:none;position:absolute;bottom:16px;right:16px;z-index:1200;background:rgba(14,17,22,.94);color:#dfe6ee;border:1px solid #3a424e;padding:8px 10px;border-radius:999px;font:800 10px Cairo}
     .owpin{display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:50%;border:2px solid #fff;box-shadow:0 4px 15px rgba(0,0,0,.35);font-size:18px}
     .owpin.rider{box-shadow:0 0 0 5px rgba(0,194,122,.12),0 4px 15px rgba(0,0,0,.35)}
-    @media(max-width:650px){#owroot{height:62svh;min-height:430px;border-radius:14px}#owroot[data-role='RIDER']{height:calc(100svh - 245px);min-height:520px}#owsearchbar{width:95%;top:8px}#owsearch{font-size:15px}.leaflet-control-zoom{margin-bottom:74px!important}.leaflet-control-attribution{font-size:8px!important}}
+    @media(max-width:650px){#owroot{height:calc(100svh - 320px);min-height:420px;border-radius:14px}#owsearchbar{width:95%;top:8px}#owsearch{font-size:15px}.leaflet-control-zoom{margin-bottom:74px!important}.leaflet-control-attribution{font-size:8px!important}}
     """
     MAP_JS = r"""
     export default function(component){
@@ -1054,7 +1049,6 @@ try:
       const root=parentElement;if(!root)return;
       const mapEl=root.querySelector('#owmap'),searchEl=root.querySelector('#owsearch'),searchBtn=root.querySelector('#owsearchbtn'),micBtn=root.querySelector('#owmic'),gpsBtn=root.querySelector('#owgps'),statusEl=root.querySelector('#owstatus'),badge=root.querySelector('#owbadge');
       const cfg=data||{};
-      root.setAttribute('data-role', String(cfg.role||''));
       const esc=v=>String(v==null?'':v).replace(/[<>&"']/g,ch=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'}[ch]));
       const showStatus=t=>{statusEl.textContent=t;statusEl.style.display='block';clearTimeout(root.__owStatusTimer);root.__owStatusTimer=setTimeout(()=>statusEl.style.display='none',2600)};
       const setBadge=(t,kind)=>{badge.textContent=t;badge.style.display='block';badge.style.borderColor=kind==='ok'?'#2a614e':kind==='warn'?'#6b541e':'#3a424e';badge.style.color=kind==='ok'?'#8df0c8':kind==='warn'?'#ffd36e':'#dbe1e8'};
@@ -1124,14 +1118,11 @@ try:
         }
         if(!mapEl.__clickBound){
           mapEl.__clickBound=true;
-          map.on('click',e=>{const c=mapEl.__cfg||{};if(!c.clickable)return;const lat=Number(e.latlng.lat.toFixed(6)),lng=Number(e.latlng.lng.toFixed(6));
-            if(mapEl.__tapMarker)map.removeLayer(mapEl.__tapMarker);
-            mapEl.__tapMarker=L.circleMarker([lat,lng],{radius:9,color:'#FF5A00',weight:3,fillColor:'#FF5A00',fillOpacity:.22}).addTo(map);
-            showStatus('جاري تحديد العنوان…');
+          map.on('click',e=>{const c=mapEl.__cfg||{};if(!c.clickable)return;const lat=Number(e.latlng.lat.toFixed(6)),lng=Number(e.latlng.lng.toFixed(6));showStatus('جاري تحديد العنوان…');
             fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=18&accept-language=ar`).then(r=>r.json()).then(d=>{fire('map_click',{lat,lng,address:(d&&d.display_name)||''});showStatus('تم تحديد الموقع ✅')}).catch(()=>{fire('map_click',{lat,lng,address:''});showStatus('تم تحديد النقطة')})});
         }
         const doSearch=()=>{const q=(searchEl.value||'').trim();if(!q)return;showStatus('جاري البحث…');
-          fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&accept-language=ar&q=${encodeURIComponent(q+', Alexandria, Egypt')}`).then(r=>r.json()).then(d=>{if(!d||!d.length){showStatus('لم يتم العثور على المكان');return}const x=d[0],lat=Number(x.lat),lng=Number(x.lon);map.setView([lat,lng],16,{animate:true});if(mapEl.__searchMarker)map.removeLayer(mapEl.__searchMarker);mapEl.__searchMarker=L.marker([lat,lng],{icon:L.divIcon({className:'',html:`<div class='owpin' style='background:#FF5A00'>📍</div>`,iconSize:[36,36],iconAnchor:[18,18]})}).addTo(map).bindPopup(`<div style='direction:rtl;font-family:Cairo,Arial'><b>${esc(x.display_name||q)}</b></div>`).openPopup();fire('search_result',{lat,lng,address:x.display_name||q,title:q});showStatus('تم العثور على المكان ✅')}).catch(()=>showStatus('تعذر الاتصال بخدمة البحث'))};
+          fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&accept-language=ar&q=${encodeURIComponent(q+', Alexandria, Egypt')}`).then(r=>r.json()).then(d=>{if(!d||!d.length){showStatus('لم يتم العثور على المكان');return}const x=d[0];fire('search_result',{lat:Number(x.lat),lng:Number(x.lon),address:x.display_name||q,title:q});showStatus('تم العثور على المكان ✅')}).catch(()=>showStatus('تعذر الاتصال بخدمة البحث'))};
         searchBtn.onclick=doSearch;searchEl.onkeydown=e=>{if(e.key==='Enter')doSearch()};
         micBtn.onclick=()=>{const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){showStatus('البحث الصوتي غير مدعوم');return}const sr=new SR();sr.lang='ar-EG';sr.interimResults=false;sr.onstart=()=>showStatus('تحدث الآن…');sr.onresult=e=>{searchEl.value=e.results[0][0].transcript;doSearch()};sr.onerror=()=>showStatus('تعذر قراءة الصوت');sr.start()};
 
@@ -1293,8 +1284,7 @@ except Exception:
 
 def mount_map(points=None, center=None, zoom=12, clickable=False, geolocation=False, route=None, key="map", selected=None, height=None, preserve_view=False, center_on_gps=False):
     cfg = {"points": points or [], "center": center or [31.2001, 29.9187], "zoom": zoom, "clickable": bool(clickable), "geolocation": bool(geolocation),
-           "auto_request_gps": bool(geolocation and key.startswith("live_map_RIDER")), "center_on_gps": bool(center_on_gps or key.startswith("live_map_RIDER")), "route": route, "selected": selected, "preserveView": bool(preserve_view),
-           "role": (st.session_state.get("user") or {}).get("role", "") }
+           "auto_request_gps": bool(geolocation and key.startswith("live_map_RIDER")), "center_on_gps": bool(center_on_gps), "route": route, "selected": selected, "preserveView": bool(preserve_view)}
     if MAP_COMPONENT:
         return MAP_COMPONENT(key=key, data=cfg)
     pts = [{"lat": p.get("lat"), "lon": p.get("lng")} for p in (points or []) if p.get("lat") is not None and p.get("lng") is not None]
@@ -1433,10 +1423,10 @@ def login():
 # =========================================================
 def _nav_menu_base(user):
     role = user["role"]
-    if role == "OWNER": return [("🏠 الرئيسية", "dashboard"), ("📦 الطلبات", "orders"), ("🗺️ الخريطة الحية", "map"), ("🧭 مركز الملاحة", "navigation"), ("🚴 الطيارون", "riders"), ("💳 حساب الطيار", "rider_wallet"), ("🏪 المطاعم والفروع", "restaurants"), ("⏱️ الحضور والساعات", "attendance"), ("💰 القبض والمرتبات", "payroll"), ("🧾 التسويات والخزينة", "settlements"), ("📊 التحليل والأداء", "analysis"), ("👥 المستخدمون", "users"), ("⚙️ الإعدادات والأدوات", "tools"), ("🎙️ المساعد الذكي", "assistant")]
-    if role == "DISPATCHER": return [("🏠 الرئيسية", "dashboard"), ("📦 الطلبات", "orders"), ("🗺️ الخريطة الحية", "map"), ("🚴 الطيارون", "riders"), ("🏪 المطاعم والفروع", "restaurants")]
-    if role == "ACCOUNTANT": return [("🏠 الرئيسية", "dashboard"), ("📦 الطلبات", "orders"), ("🗺️ الخريطة الحية", "map"), ("⏱️ الحضور والساعات", "attendance"), ("💰 القبض والمرتبات", "payroll"), ("🧾 التسويات والخزينة", "settlements"), ("📊 التحليل والأداء", "analysis"), ("⚙️ الأدوات", "tools")]
-    if role == "RIDER": return [("🛵 مهمتي الآن", "rider"), ("📦 طلباتي", "orders"), ("💳 حسابي المالي", "rider_wallet"), ("⏱️ الحضور والساعات", "attendance")]
+    if role == "OWNER": return [("🏠 الرئيسية", "dashboard"), ("📦 الطلبات", "orders"), ("🗺️ الخريطة الحية", "map"), ("🧭 مركز الملاحة", "navigation"), ("🚴 الطيارون", "riders"), ("💳 حساب الطيار", "rider_wallet"), ("🏪 المطاعم والفروع", "restaurants"), ("⏱️ الحضور والساعات", "attendance"), ("💰 القبض والمرتبات", "payroll"), ("🧾 التسويات والخزينة", "settlements"), ("📊 التحليل والأداء", "analysis"), ("👥 المستخدمون", "users"), ("🔐 أمان الحساب", "security"), ("⚙️ الإعدادات والأدوات", "tools"), ("🎙️ المساعد الذكي", "assistant")]
+    if role == "DISPATCHER": return [("🏠 الرئيسية", "dashboard"), ("📦 الطلبات", "orders"), ("🗺️ الخريطة الحية", "map"), ("🚴 الطيارون", "riders"), ("🏪 المطاعم والفروع", "restaurants"), ("🔐 أمان الحساب", "security")]
+    if role == "ACCOUNTANT": return [("🏠 الرئيسية", "dashboard"), ("📦 الطلبات", "orders"), ("🗺️ الخريطة الحية", "map"), ("⏱️ الحضور والساعات", "attendance"), ("💰 القبض والمرتبات", "payroll"), ("🧾 التسويات والخزينة", "settlements"), ("📊 التحليل والأداء", "analysis"), ("🔐 أمان الحساب", "security"), ("⚙️ الأدوات", "tools")]
+    if role == "RIDER": return [("🛵 مهمتي الآن", "rider"), ("📦 طلباتي", "orders"), ("💳 حسابي المالي", "rider_wallet"), ("⏱️ الحضور والساعات", "attendance"), ("🔐 أمان الحساب", "security")]
     return [("🏠 الرئيسية", "dashboard"), ("📦 طلبات المطعم", "orders"), ("🗺️ خريطة المطعم", "map")]
 
 
@@ -1514,7 +1504,7 @@ def live_notifications_fragment(user):
     if role not in ("OWNER", "DISPATCHER", "RIDER"): return
     key = f"live_notify_{user['id']}_{role}"
     if role == "RIDER":
-        row = one("SELECT COUNT(*) n, COALESCE((SELECT GROUP_CONCAT(sig,'') FROM (SELECT id || status AS sig FROM orders WHERE rider_id=? AND status NOT IN ('تم التسليم','ملغى') ORDER BY id)), '') sig", (user.get("ref_id"),)) or {"n": 0, "sig": ""}
+        row = one("SELECT COUNT(*) n, COALESCE(GROUP_CONCAT(id||status),'') sig FROM orders WHERE rider_id=? AND status NOT IN ('تم التسليم','ملغى')", (user.get("ref_id"),)) or {"n": 0, "sig": ""}
         snap = f"{row['n']}|{row['sig']}"; prev = st.session_state.get(key); st.session_state[key] = snap
         if prev is not None and snap != prev and int(row["n"]) >= int(prev.split("|")[0]):
             st.toast("🔔 تم توجيه/تحديث طلب لك", icon="🧡"); notify_user(user, "new_order")
@@ -1561,8 +1551,7 @@ def _payload(result, name):
 def live_map_fragment(user, navigation=False, route=None):
     points = map_points_for(user)
     result = mount_map(points, center=[31.2001, 29.9187], zoom=12, clickable=navigation, geolocation=(navigation or _is_real_rider()), route=route,
-                       key="live_map_navigation" if navigation else f"live_map_{user['role']}", selected=st.session_state.get("map_selection") if navigation else None,
-                       preserve_view=not navigation, center_on_gps=(_is_real_rider() and not navigation))
+                       key="live_map_navigation" if navigation else f"live_map_{user['role']}", selected=st.session_state.get("map_selection") if navigation else None)
     if not result: return
     for name in ("map_click", "search_result"):
         p = _payload(result, name)
@@ -1728,7 +1717,6 @@ def render_dashboard(user):
         return
     d = dashboard_data()
     header("غرفة العمليات", "هذه الشاشة تقول لك أين تحتاج أن تتدخل الآن.")
-    st.markdown(f'<div class="ow-mobile-rail"><span class="ow-rail-chip brand">🧡 ONWAY</span><span class="ow-rail-chip good">🟢 النظام يعمل</span><span class="ow-rail-chip">🕒 {now_dt().strftime("%H:%M")}</span></div>', unsafe_allow_html=True)
     metric_grid([("طلبات اليوم", d["total"], f"كاش {d['cash']} • آجل {d['credit']}", "info"), ("قيد التنفيذ", d["active"], "في الميدان", "info"), ("تحتاج تدخل", d["overdue"], "متأخرة", "danger" if d["overdue"] else "good"),
                  ("تم التسليم", d["done"], f"رسوم خدمة {d['service']:,.0f} ج", "good"), ("آجل مستحق", f"{d['credit_due']:,.0f} ج", "يحتاج تحصيل", "warn"), ("الخزينة", f"{d['treasury']:,.0f} ج", f"دخل اليوم {cash_receipts_today():,.0f} ج", "good")])
     if d["overdue"]:
@@ -1995,6 +1983,58 @@ def _ref_select(role, current=None, key="ref"):
     return ids[rr["name"].tolist().index(st.selectbox(lab, rr["name"].tolist(), index=idx, key=key))]
 
 
+def render_account_security(user):
+    """واجهة أمن الحساب: تغيير PIN الشخصي، وللمالك تعيين PIN لمستخدم آخر."""
+    header("أمان الحساب", "تغيير PIN وإدارة الوصول بدون إظهار أي كلمة مرور مخزنة.")
+    with st.container(border=True):
+        st.markdown("### 🔐 تغيير PIN الخاص بي")
+        with st.form("change_own_pin_form"):
+            a, b = st.columns(2)
+            current = a.text_input("PIN الحالي", type="password", max_chars=8)
+            new = b.text_input("PIN الجديد", type="password", max_chars=8)
+            confirm = st.text_input("تأكيد PIN الجديد", type="password", max_chars=8)
+            if st.form_submit_button("🔒 تغيير PIN", type="primary", use_container_width=True):
+                try:
+                    if new != confirm:
+                        raise ValueError("تأكيد PIN الجديد غير مطابق.")
+                    change_own_pin(current, new, user)
+                    st.success("تم تغيير PIN بنجاح. الجلسة الحالية مستمرة.")
+                    st.rerun()
+                except Exception as ex:
+                    st.error(str(ex))
+    if actor_is_owner(user):
+        st.divider()
+        st.markdown("### 👑 تعيين PIN لمستخدم")
+        us = df("SELECT id,name,email,role,active FROM users WHERE id!=? ORDER BY name", (user["id"],))
+        if us.empty:
+            st.info("لا توجد حسابات أخرى.")
+        else:
+            selected = st.selectbox("المستخدم", us["name"].tolist(), key="security_user_select")
+            target = us[us["name"] == selected].iloc[0]
+            with st.form("owner_set_user_pin_form"):
+                p1 = st.text_input("PIN الجديد", type="password", max_chars=8)
+                p2 = st.text_input("تأكيد PIN", type="password", max_chars=8)
+                c1, c2 = st.columns(2)
+                set_btn = c1.form_submit_button("تعيين PIN", type="primary", use_container_width=True)
+                gen_btn = c2.form_submit_button("توليد PIN آمن", use_container_width=True)
+                if set_btn or gen_btn:
+                    try:
+                        chosen = (''.join(secrets.choice('0123456789') for _ in range(6)) if gen_btn else p1)
+                        if not gen_btn and chosen != p2:
+                            raise ValueError("تأكيد PIN غير مطابق.")
+                        owner_set_user_pin(target["id"], chosen, user)
+                        st.session_state.generated_pin = {"name": target["name"], "pin": chosen}
+                        st.success("تم تعيين PIN وإبطال الجلسات القديمة للمستخدم.")
+                        st.rerun()
+                    except Exception as ex:
+                        st.error(str(ex))
+    if st.session_state.get("generated_pin"):
+        x = st.session_state["generated_pin"]
+        st.warning(f"PIN الجديد لـ {x['name']}: {x['pin']} — احفظه الآن؛ سيُخفى بعد مغادرة الصفحة.")
+        if st.button("إخفاء PIN", key="security_hide_pin", use_container_width=True):
+            st.session_state.pop("generated_pin", None); st.rerun()
+
+
 def render_users(user):
     header("المستخدمون والحسابات", "أنت تنشئ حساب كل موظف حسب مهمته وتحدد له PIN — ويبقى مسجلاً على جهازه حتى يخرج.")
     us = df("SELECT id,name,email,role,ref_id,active,created_at FROM users ORDER BY name")
@@ -2220,6 +2260,34 @@ def render_tools(user):
         with st.expander("سجل التدقيق"): st.dataframe(df("SELECT created_at,actor_id,action,entity,entity_id FROM audit_log ORDER BY id DESC LIMIT 500").rename(columns={"created_at": "الوقت", "actor_id": "المستخدم", "action": "العملية", "entity": "الكيان", "entity_id": "المعرف"}), use_container_width=True, hide_index=True)
 
 
+def render_rider_wallet(user):
+    header("محفظة الطيار", "مستحقاتك: العمولة المكتسبة، ما تمت تسويته، وما تبقى.")
+    rid = user.get("ref_id"); owner = actor_is_owner(user)
+    if owner and not rid:
+        riders = df("SELECT id,name FROM riders ORDER BY name")
+        if riders.empty: st.info("لا يوجد طيارون."); return
+        rid = riders.iloc[riders["name"].tolist().index(st.selectbox("اختر الطيار", riders["name"].tolist(), key="owner_wallet_rider"))]["id"]
+    r = rider_row(rid)
+    if not r: st.error("لا يوجد طيار مرتبط بهذه المساحة."); return
+    a, b = st.columns(2); sd = a.date_input("من", value=today_d() - timedelta(days=6), key=f"ws_{rid}"); ed = b.date_input("إلى", value=today_d(), key=f"we_{rid}")
+    if ed < sd: st.error("تاريخ النهاية يجب أن يكون بعد البداية."); return
+    s_, e_ = sd.isoformat(), (ed + timedelta(days=1)).isoformat()
+    delivered = df("SELECT * FROM orders WHERE rider_id=? AND status='تم التسليم' AND delivered_at>=? AND delivered_at<?", (rid, s_ + " 00:00:00", e_ + " 00:00:00"))
+    settled = df("SELECT DISTINCT si.order_id FROM settlement_items si JOIN settlements s ON s.id=si.settlement_id WHERE s.kind='طيار_كاش' AND COALESCE(s.voided,0)=0 AND si.order_id IN (SELECT id FROM orders WHERE rider_id=? AND status='تم التسليم' AND delivered_at>=? AND delivered_at<?)", (rid, s_ + " 00:00:00", e_ + " 00:00:00"))
+    sids = set(settled["order_id"].tolist()) if not settled.empty else set()
+    earned = float(delivered["rider_commission"].sum()) if not delivered.empty else 0.0
+    paid_c = float(delivered[delivered["id"].isin(sids)]["rider_commission"].sum()) if not delivered.empty else 0.0
+    os_ = rider_unsettled_orders(rid, s_, e_)
+    cash_open = float(os_["remaining_cash"].sum()) if not os_.empty else 0.0
+    net = round(cash_open - (float(os_["rider_commission"].sum()) if not os_.empty else 0) - (float(os_["reward"].sum()) if not os_.empty else 0) + (float(os_["discount"].sum()) if not os_.empty else 0), 2)
+    metric_grid([("طلبات مسلّمة", len(delivered), f"{PAY_MODES.get(r['pay_mode'], '')}", "info"), ("إجمالي العمولة", f"{earned:,.2f} ج", "المكتسبة", "good"), ("عمولة مُسوّاة", f"{paid_c:,.2f} ج", "ضمن تصفية الكاش", "info"), ("عمولة متبقية", f"{earned - paid_c:,.2f} ج", "تدخل في المستحقات", "warn"), ("كاش معك", f"{cash_open:,.2f} ج", "لم يُورَّد", "danger" if cash_open > 0 else "good"), ("صافي التوريد", f"{net:,.2f} ج", "توريد/صرف الآن", "good")])
+    if os_.empty: st.success("✅ لا توجد طلبات كاش غير مصفاة في الفترة.")
+    else: st.dataframe(os_[["order_no", "restaurant", "branch", "delivered_at", "rider_commission", "reward", "discount", "remaining_cash"]].rename(columns={"order_no": "الطلب", "restaurant": "المطعم", "branch": "الفرع", "delivered_at": "التسليم", "rider_commission": "العمولة", "reward": "المكافأة", "discount": "الخصم", "remaining_cash": "الكاش المتبقي"}), use_container_width=True, hide_index=True)
+    if owner and not os_.empty and st.button("💰 تنفيذ تصفية الطيار الآن", type="primary", use_container_width=True):
+        try: sid, due, n = create_rider_settlement(rid, s_, e_, user); st.success(f"تمت التصفية • {n} طلب • صافي التوريد {due:,.2f} ج"); st.rerun()
+        except Exception as ex: st.error(str(ex))
+
+
 # =========================================================
 # شاشة الطيار — بسيطة: طلب واحد وزر واحد كبير
 # =========================================================
@@ -2228,95 +2296,54 @@ RIDER_ACTIONS = {"تم القبول": "✅ قبول الطلب", "تم الاس�
 
 def render_rider(user):
     r = rider_row(user["ref_id"])
-    if not r:
-        st.error("حساب الطيار غير مرتبط بسجل صالح — تواصل مع الإدارة.")
-        return
-
-    my = df("""SELECT o.*,rs.name restaurant,rs.phone restaurant_phone,b.name branch,b.address branch_address,
-                     b.lat branch_lat,b.lng branch_lng
-              FROM orders o JOIN restaurants rs ON rs.id=o.restaurant_id
-              JOIN branches b ON b.id=o.branch_id
-              WHERE o.rider_id=? AND o.status NOT IN ('تم التسليم','ملغى')
-              ORDER BY o.created_at""", (r["id"],))
+    if not r: st.error("حساب الطيار غير مرتبط بسجل صالح — تواصل مع الإدارة."); return
+    header(f"🛵 أهلاً {r['name']}", "طلبك الحالي وزر واحد للخطوة التالية.")
+    my = df("SELECT o.*,rs.name restaurant,rs.phone restaurant_phone,b.name branch,b.address branch_address,b.lat branch_lat,b.lng branch_lng FROM orders o JOIN restaurants rs ON rs.id=o.restaurant_id JOIN branches b ON b.id=o.branch_id WHERE o.rider_id=? AND o.status NOT IN ('تم التسليم','ملغى') ORDER BY o.created_at", (r["id"],))
     fresh = gps_fresh(r)
     w = rider_wallet(r["id"])
-    att = one("SELECT * FROM attendance WHERE rider_id=? AND work_date=?", (r["id"], today_str()))
-
+    metric_grid([("طلبات نشطة", len(my), r["status"], "info"), ("GPS", "🟢 يعمل" if fresh else "🟠 افتح الخريطة", "موقعك", "good" if fresh else "warn"), ("حسابك المالي", f"{abs(w['due_to_rider']):,.0f} ج", "لك عند الشركة" if w["due_to_rider"] >= 0 else "عليك توريده", "good" if w["due_to_rider"] >= 0 else "warn")])
     route = None
-    cur = None
-    if not my.empty:
-        cur = my.iloc[0].to_dict()
-        before_pickup = cur["status"] in ("جديد", "تم التعيين", "تم القبول")
-        tgt = ([float(cur["branch_lat"]), float(cur["branch_lng"])] if before_pickup and cur.get("branch_lat") is not None
-               else ([float(cur["delivery_lat"]), float(cur["delivery_lng"])] if cur.get("delivery_lat") is not None else None))
-        if tgt and r.get("last_lat") is not None:
-            route = {"from": [float(r["last_lat"]), float(r["last_lng"])], "to": tgt}
-
-    header(f"🛵 {r['name']}", "الخريطة أولاً • المهمة الحالية • إجراء واحد في كل خطوة.")
-    metric_grid([
-        ("طلبات نشطة", len(my), "المهمة الحالية", "info"),
-        ("GPS", "🟢 حديث" if fresh else "🟠 يحتاج تفعيل", "الموقع", "good" if fresh else "warn"),
-        ("المستحق", f"{abs(w['due_to_rider']):,.0f} ج", "لك / عليك", "good" if w['due_to_rider'] >= 0 else "warn"),
-        ("ساعات اليوم", f"{attendance_hours(att):.1f}" if att and att.get("clock_out") else "—", "ساعة فعلية", "info"),
-    ])
-    gps_state = st.session_state.get("gps_status") or {}
-    gps_text = "GPS متصل" if fresh else ("اسمح بالموقع من إعدادات الهاتف" if gps_state.get("code") == 1 else "شغّل موقعي من الخريطة")
-    st.markdown(f'<div class="ow-mobile-rail"><span class="ow-rail-chip {"good" if fresh else "warn"}">📍 {esc(gps_text)}</span><span class="ow-rail-chip brand">🧭 توجيه المهمة</span><span class="ow-rail-chip">🔔 تنبيهات فورية</span></div>', unsafe_allow_html=True)
-
-    with st.container(border=True):
-        st.markdown('<div class="section-title">🗺️ خريطة المهمة</div><div class="section-sub">موقعك والمسار والوجهة في مساحة واحدة.</div>', unsafe_allow_html=True)
-        live_map_fragment(user, route=route)
-
     if my.empty:
-        st.success("✅ لا يوجد طلب نشط الآن — أنت جاهز للمهمة التالية.")
+        st.success("لا يوجد طلب نشط الآن — أنت جاهز، وستصلك نغمة عند وصول طلب جديد 🔔")
     else:
-        before_pickup = cur["status"] in ("جديد", "تم التعيين", "تم القبول")
+        cur = my.iloc[0].to_dict(); before_pickup = cur["status"] in ("جديد", "تم التعيين", "تم القبول")
         st.markdown(f'''<div class="rider-order"><div class="no">{esc(cur["order_no"])} &nbsp; {badge(cur["status"])}</div>
-        <div class="row"><div class="ico">🏪</div><div><b>الاستلام</b><br>{esc(cur["restaurant"])} — {esc(cur["branch"])}<br><span style="color:#9AA4B2">{esc(cur["branch_address"] or "")}</span></div></div>
-        <div class="row"><div class="ico">📍</div><div><b>التسليم</b><br>{esc(cur["delivery_address"])}{("<br>" + esc(cur.get("customer_name") or "")) if cur.get("customer_name") else ""}</div></div>
-        <div class="row"><div class="ico">💵</div><div><b>التحصيل</b><br>{"كاش — حصّل " + format(cur["cash_collected"], ",.0f") + " ج" if cur["billing_mode"] == "كاش" else "آجل — لا تحصيل نقدي"}</div></div>
-        <div class="earn">عمولتك: {cur["rider_commission"]:,.2f} ج</div></div>''', unsafe_allow_html=True)
-
+        <div class="row"><div class="ico">🏪</div><div><b>الاستلام:</b> {esc(cur["restaurant"])} — {esc(cur["branch"])}<br><span style="color:#9AA4B2">{esc(cur["branch_address"] or "")}</span></div></div>
+        <div class="row"><div class="ico">📍</div><div><b>التسليم:</b> {esc(cur["delivery_address"])}{("<br>" + esc(cur.get("customer_name") or "")) if cur.get("customer_name") else ""}</div></div>
+        <div class="row"><div class="ico">💵</div><div><b>التحصيل:</b> {"كاش — حصّل " + format(cur["cash_collected"], ",.0f") + " ج من المطعم" if cur["billing_mode"] == "كاش" else "آجل — لا تحصيل"}</div></div>
+        <div class="earn">عمولتك من هذا الطلب: {cur["rider_commission"]:,.2f} ج</div></div>''', unsafe_allow_html=True)
         nxt = [a for a in transitions(cur["status"]) if a != "ملغى"]
         if nxt:
             st.markdown('<div class="rider-action">', unsafe_allow_html=True)
             if st.button(RIDER_ACTIONS.get(nxt[0], nxt[0]), type="primary", use_container_width=True, key=f"r_action_{cur['id']}_{nxt[0]}"):
-                try:
-                    change_order_status(cur["id"], nxt[0], user)
-                    st.toast("تم تحديث المهمة ✅", icon="🧡")
-                    st.rerun()
-                except Exception as ex:
-                    st.error(str(ex))
+                try: change_order_status(cur["id"], nxt[0], user); st.toast("تم ✅"); st.rerun()
+                except Exception as ex: st.error(str(ex))
             st.markdown('</div>', unsafe_allow_html=True)
-
         a, b = st.columns(2)
         if before_pickup and cur.get("branch_lat") is not None:
-            a.link_button("🧭 الملاحة للمطعم", f"https://www.google.com/maps/dir/?api=1&destination={cur['branch_lat']},{cur['branch_lng']}", use_container_width=True)
+            a.link_button("🧭 ملاحة للمطعم", f"https://www.google.com/maps/dir/?api=1&destination={cur['branch_lat']},{cur['branch_lng']}", use_container_width=True)
         elif cur.get("delivery_lat") is not None:
-            a.link_button("🧭 الملاحة للعميل", f"https://www.google.com/maps/dir/?api=1&destination={cur['delivery_lat']},{cur['delivery_lng']}", use_container_width=True)
-        if before_pickup and cur.get("restaurant_phone"):
-            b.link_button("📞 اتصال بالمطعم", f"tel:{cur['restaurant_phone']}", use_container_width=True)
-        elif cur.get("customer_phone"):
-            b.link_button("📞 اتصال بالعميل", f"tel:{cur['customer_phone']}", use_container_width=True)
-
+            a.link_button("🧭 ملاحة للعميل", f"https://www.google.com/maps/dir/?api=1&destination={cur['delivery_lat']},{cur['delivery_lng']}", use_container_width=True)
+        if before_pickup and cur.get("restaurant_phone"): b.link_button("📞 اتصال بالمطعم", f"tel:{cur['restaurant_phone']}", use_container_width=True)
+        elif cur.get("customer_phone"): b.link_button("📞 اتصال بالعميل", f"tel:{cur['customer_phone']}", use_container_width=True)
+        tgt = [float(cur["branch_lat"]), float(cur["branch_lng"])] if before_pickup and cur.get("branch_lat") is not None else ([float(cur["delivery_lat"]), float(cur["delivery_lng"])] if cur.get("delivery_lat") is not None else None)
+        if tgt and r.get("last_lat") is not None: route = {"from": [float(r["last_lat"]), float(r["last_lng"])], "to": tgt}
         if len(my) > 1:
-            with st.expander(f"📋 الطلبات القادمة ({len(my)-1})"):
-                for _, o in my.iloc[1:].iterrows():
-                    st.markdown(f"**{esc(o['order_no'])}** — {esc(o['restaurant'])} ← {esc(o['delivery_address'])} — {badge(o['status'])}", unsafe_allow_html=True)
-
-    st.markdown('<div class="ow-divider"></div><div class="section-title">⏱️ الوردية</div>', unsafe_allow_html=True)
+            with st.expander(f"📋 طلبات قادمة ({len(my) - 1})"):
+                for _, o in my.iloc[1:].iterrows(): st.markdown(f"**{esc(o['order_no'])}** — {esc(o['restaurant'])} ← {esc(o['delivery_address'])} — {badge(o['status'])}", unsafe_allow_html=True)
+    gps_state = st.session_state.get("gps_status") or {}
+    hint = "الإذن مرفوض: من إعدادات المتصفح > أذونات الموقع > السماح، ثم أعد تحميل الصفحة." if gps_state.get("code") == 1 else "اترك هذه الصفحة مفتوحة أثناء العمل ليصل موقعك للإدارة. اضغط «تشغيل موقعي» في الخريطة أول مرة."
+    st.markdown(f'<div class="gps-panel"><div class="gps-title">📍 تتبع الموقع</div><div class="gps-sub">{hint}</div></div>', unsafe_allow_html=True)
+    live_map_fragment(user, route=route)
+    att = one("SELECT * FROM attendance WHERE rider_id=? AND work_date=?", (r["id"], today_str()))
+    st.markdown("### ⏱️ يوم العمل")
     if not att or not att["clock_in"]:
-        st.markdown('<div class="ow-field-note">سجل الدخول عند بدء الوردية ليتم احتساب ساعات العمل الفعلية.</div>', unsafe_allow_html=True)
-        if st.button("🟢 تسجيل دخول الوردية", type="primary", use_container_width=True):
-            upsert_attendance({"rider_id": r["id"], "work_date": today_str(), "clock_in": now_iso(), "clock_out": None, "break_minutes": 0, "status": "حاضر", "reason": ""}, user)
-            st.rerun()
+        if st.button("🟢 تسجيل دخول", type="primary", use_container_width=True): upsert_attendance({"rider_id": r["id"], "work_date": today_str(), "clock_in": now_iso(), "clock_out": None, "break_minutes": 0, "status": "حاضر", "reason": ""}, user); st.rerun()
     elif not att["clock_out"]:
         st.info(f"دخلت الساعة {att['clock_in'][11:16]}")
-        if st.button("🔴 إنهاء الوردية", type="primary", use_container_width=True):
-            upsert_attendance({"rider_id": r["id"], "work_date": today_str(), "clock_in": att["clock_in"], "clock_out": now_iso(), "break_minutes": int(att.get("break_minutes") or 0), "status": "حاضر", "reason": ""}, user)
-            st.rerun()
-    else:
-        st.success(f"✅ ساعات العمل الفعلية اليوم: {attendance_hours(att):.2f} ساعة")
+        if st.button("🔴 تسجيل خروج", type="primary", use_container_width=True): upsert_attendance({"rider_id": r["id"], "work_date": today_str(), "clock_in": att["clock_in"], "clock_out": now_iso(), "break_minutes": int(att.get("break_minutes") or 0), "status": "حاضر", "reason": ""}, user); st.rerun()
+    else: st.success(f"ساعات اليوم: {attendance_hours(att):.2f} ساعة")
+
 
 
 
@@ -2748,7 +2775,7 @@ def render_tracking(token):
 
 
 PAGES = {"dashboard": render_dashboard, "orders": render_orders, "map": render_live_map, "navigation": render_navigation_center, "riders": render_riders, "rider_wallet": render_rider_wallet,
-         "restaurants": render_restaurants, "attendance": render_attendance, "payroll": render_payroll, "settlements": render_settlements, "analysis": render_analysis, "users": render_users, "tools": render_tools, "rider": render_rider, "assistant": render_assistant}
+         "restaurants": render_restaurants, "attendance": render_attendance, "payroll": render_payroll, "settlements": render_settlements, "analysis": render_analysis, "users": render_users, "security": render_account_security, "tools": render_tools, "rider": render_rider, "assistant": render_assistant}
 
 
 def main():
