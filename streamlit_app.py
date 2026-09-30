@@ -1484,6 +1484,7 @@ def menu_bar(user):
                 if st.button("＋ مطعم", key="q_rest", use_container_width=True): goto("restaurants", quick_add_restaurant=True)
                 if st.button("＋ فرع", key="q_branch", use_container_width=True): goto("restaurants", quick_add_branch=True)
                 if st.button("＋ طيار", key="q_rider", use_container_width=True): goto("riders", quick_add_rider=True)
+                if st.button("＋ حساب مستخدم", key="q_user", type="primary", use_container_width=True): goto("users", quick_create_user=True)
     if st.session_state.pop("_test_sound", False):
         st.session_state["_sound_nonce"] = st.session_state.get("_sound_nonce", 0) + 1
         notify_user(user, "new_order", suffix=f"test{st.session_state['_sound_nonce']}", force=True)
@@ -2036,36 +2037,108 @@ def render_account_security(user):
 
 
 def render_users(user):
-    header("المستخدمون والحسابات", "أنت تنشئ حساب كل موظف حسب مهمته وتحدد له PIN — ويبقى مسجلاً على جهازه حتى يخرج.")
-    us = df("SELECT id,name,email,role,ref_id,active,created_at FROM users ORDER BY name")
+    need_owner(user, "إدارة وإنشاء حسابات المستخدمين للمالك فقط.")
+    header("المستخدمون والحسابات", "من هنا ينشئ المالك حساب أي موظف، يحدد دوره، يربطه بالطيار/المطعم، ويعيّن أو يولّد PIN.")
+
     roles = ["DISPATCHER", "ACCOUNTANT", "RIDER", "RESTAURANT"]
+    show_create = bool(st.session_state.pop("quick_create_user", False)) or st.session_state.get("show_create_user", False)
+
+    # زر واضح وثابت — لا نخفي إنشاء الحساب داخل قائمة/صف صغير.
+    if not show_create:
+        if st.button("＋  إنشاء حساب مستخدم جديد", type="primary", use_container_width=True, key="open_create_user_main"):
+            st.session_state.show_create_user = True
+            st.rerun()
+    else:
+        with st.container(border=True):
+            st.markdown("### 👤 إنشاء حساب مستخدم جديد")
+            st.caption("يُنشئ المالك الحساب مرة واحدة، ويظهر PIN الأولي مرة واحدة فقط. بعد الحفظ يصبح المستخدم قادراً على تسجيل الدخول من جهازه.")
+            role = st.selectbox("نوع الحساب", roles, format_func=role_label, key="new_user_role")
+            ref = _ref_select(role, key="new_user_ref")
+            with st.form("create_user_account_form", clear_on_submit=True):
+                a, b = st.columns(2)
+                n = a.text_input("الاسم الكامل", placeholder="مثال: أحمد محمود")
+                e = b.text_input("البريد الإلكتروني", placeholder="name@example.com")
+                pin_value = st.session_state.get("new_user_pin", "")
+                pin = st.text_input("PIN الأولي (4 إلى 8 أرقام)", value=pin_value, type="password", max_chars=8, placeholder="مثال: 583214")
+                submit = st.form_submit_button("✅ إنشاء الحساب", type="primary", use_container_width=True)
+                if submit:
+                    try:
+                        created_id = create_user({"name": n, "email": e, "role": role, "pin": pin, "ref_id": ref}, user)
+                        st.session_state.created_user = {"id": created_id, "name": n.strip(), "email": e.strip().lower(), "role": role, "pin": pin}
+                        st.session_state.pop("new_user_pin", None)
+                        st.session_state.show_create_user = False
+                        st.success("تم إنشاء الحساب بنجاح.")
+                        st.rerun()
+                    except Exception as ex:
+                        st.error(str(ex))
+            g, c = st.columns(2)
+            if g.button("🎲 توليد PIN آمن", use_container_width=True, key="generate_first_pin"):
+                st.session_state.new_user_pin = ''.join(secrets.choice("0123456789") for _ in range(6))
+                st.rerun()
+            if c.button("إلغاء", use_container_width=True, key="cancel_create_user"):
+                st.session_state.show_create_user = False
+                st.session_state.pop("new_user_pin", None)
+                st.rerun()
+
+    # بطاقة نجاح تحتوي بيانات الدخول التي يحددها المالك أو يولدها.
+    created = st.session_state.get("created_user")
+    if created:
+        with st.container(border=True):
+            st.success(f"تم إنشاء حساب {created['name']} بنجاح ✅")
+            st.markdown(f"**الدور:** {role_label(created['role'])}")
+            st.markdown(f"**البريد:** `{esc(created['email'])}`")
+            st.markdown(f"**PIN الأولي:** `{esc(created['pin'])}`")
+            st.caption("احتفظ بالـPIN الآن؛ لن يتم عرض القيمة المخزنة بعد ذلك لأنها محفوظة مشفرة.")
+            if st.button("حسناً، أخفي بيانات الدخول", key="hide_created_user", use_container_width=True):
+                st.session_state.pop("created_user", None)
+                st.rerun()
+
+    us = df("SELECT id,name,email,role,ref_id,active,created_at FROM users ORDER BY name")
+    if us.empty:
+        st.info("لا توجد حسابات موظفين بعد. ابدأ من «إنشاء حساب مستخدم جديد»." )
+        return
+
+    st.markdown("### 👥 الحسابات الحالية")
     for _, u in us.iterrows():
         with st.container(border=True):
-            a, b, c = st.columns([2.2, 1, 1]); a.markdown(f"**{esc(u['name'])}**<br><span style='color:#9AA4B2;font-size:.7rem'>{esc(u['email'])}</span>", unsafe_allow_html=True); b.write(role_label(u["role"])); c.markdown(badge("نشط" if u["active"] else "غير نشط", "green" if u["active"] else "red"), unsafe_allow_html=True)
-            if u["id"] == user["id"] or u["role"] == "OWNER": continue
-            with st.expander("✏️ تعديل الحساب"):
+            a, b, c = st.columns([2.2, 1, 1])
+            a.markdown(f"**{esc(u['name'])}**<br><span style='color:#9AA4B2;font-size:.7rem'>{esc(u['email'])}</span>", unsafe_allow_html=True)
+            b.write(role_label(u["role"]))
+            c.markdown(badge("نشط" if u["active"] else "غير نشط", "green" if u["active"] else "red"), unsafe_allow_html=True)
+            if u["id"] == user["id"] or u["role"] == "OWNER":
+                continue
+            with st.expander("✏️ إدارة الحساب"):
                 role = st.selectbox("الدور", roles, index=roles.index(u["role"]) if u["role"] in roles else 0, format_func=role_label, key=f"ur_{u['id']}")
                 ref = _ref_select(role, u["ref_id"], key=f"uref_{u['id']}")
                 with st.form(f"uedit_{u['id']}"):
-                    a, b = st.columns(2); n = a.text_input("الاسم", value=u["name"]); e = b.text_input("البريد", value=u["email"]); pin = st.text_input("PIN جديد (اتركه فارغاً لعدم التغيير)", type="password", max_chars=8)
+                    a, b = st.columns(2)
+                    n = a.text_input("الاسم", value=u["name"])
+                    e = b.text_input("البريد", value=u["email"])
+                    pin = st.text_input("PIN جديد (اختياري)", type="password", max_chars=8)
                     if st.form_submit_button("حفظ التعديل", type="primary", use_container_width=True):
-                        try: update_user(u["id"], {"name": n, "email": e, "role": role, "ref_id": ref, "pin": pin}, user); st.success("تم الحفظ."); st.rerun()
-                        except Exception as ex: st.error(str(ex))
+                        try:
+                            update_user(u["id"], {"name": n, "email": e, "role": role, "ref_id": ref, "pin": pin}, user)
+                            st.success("تم حفظ الحساب.")
+                            st.rerun()
+                        except Exception as ex:
+                            st.error(str(ex))
                 x, y = st.columns(2)
                 if x.button("تعطيل" if u["active"] else "تفعيل", key=f"uact_{u['id']}", use_container_width=True):
-                    try: set_active("user", u["id"], not bool(u["active"]), user); st.rerun()
-                    except Exception as ex: st.error(str(ex))
-                if y.button("🔑 توليد PIN جديد", key=f"upin_{u['id']}", use_container_width=True): st.session_state.generated_pin = {"name": u["name"], "pin": reset_user_pin(u["id"], user)}; st.rerun()
+                    try:
+                        set_active("user", u["id"], not bool(u["active"]), user)
+                        st.rerun()
+                    except Exception as ex:
+                        st.error(str(ex))
+                if y.button("🔑 توليد PIN جديد", key=f"upin_{u['id']}", use_container_width=True):
+                    st.session_state.generated_pin = {"name": u["name"], "pin": reset_user_pin(u["id"], user)}
+                    st.rerun()
+
     if st.session_state.get("generated_pin"):
-        x = st.session_state.generated_pin; st.success(f"PIN الجديد لـ {x['name']}: {x['pin']} — يظهر مرة واحدة.")
-        if st.button("إخفاء PIN", use_container_width=True): st.session_state.pop("generated_pin", None); st.rerun()
-    with st.expander("＋ إنشاء حساب موظف"):
-        role = st.selectbox("الدور", roles, format_func=role_label, key="new_user_role"); ref = _ref_select(role, key="new_user_ref")
-        with st.form("create_user"):
-            a, b = st.columns(2); n = a.text_input("الاسم"); e = b.text_input("البريد الإلكتروني"); pin = st.text_input("PIN أولي (4-8 أرقام)", type="password", max_chars=8)
-            if st.form_submit_button("إنشاء الحساب", type="primary", use_container_width=True):
-                try: create_user({"name": n, "email": e, "role": role, "pin": pin, "ref_id": ref}, user); st.success("تم إنشاء الحساب."); st.rerun()
-                except Exception as ex: st.error(str(ex))
+        x = st.session_state.generated_pin
+        st.success(f"PIN الجديد لـ {x['name']}: {x['pin']} — يظهر مرة واحدة.")
+        if st.button("إخفاء PIN", key="hide_generated_pin", use_container_width=True):
+            st.session_state.pop("generated_pin", None)
+            st.rerun()
 
 
 # =========================================================
@@ -2258,34 +2331,6 @@ def render_tools(user):
     st.download_button("📦 تنزيل نسخة بيانات ONWAY", data=mem.getvalue(), file_name=f"ONWAY_Backup_{today_str()}.zip", mime="application/zip", use_container_width=True)
     if user["role"] in ("OWNER", "ACCOUNTANT"):
         with st.expander("سجل التدقيق"): st.dataframe(df("SELECT created_at,actor_id,action,entity,entity_id FROM audit_log ORDER BY id DESC LIMIT 500").rename(columns={"created_at": "الوقت", "actor_id": "المستخدم", "action": "العملية", "entity": "الكيان", "entity_id": "المعرف"}), use_container_width=True, hide_index=True)
-
-
-def render_rider_wallet(user):
-    header("محفظة الطيار", "مستحقاتك: العمولة المكتسبة، ما تمت تسويته، وما تبقى.")
-    rid = user.get("ref_id"); owner = actor_is_owner(user)
-    if owner and not rid:
-        riders = df("SELECT id,name FROM riders ORDER BY name")
-        if riders.empty: st.info("لا يوجد طيارون."); return
-        rid = riders.iloc[riders["name"].tolist().index(st.selectbox("اختر الطيار", riders["name"].tolist(), key="owner_wallet_rider"))]["id"]
-    r = rider_row(rid)
-    if not r: st.error("لا يوجد طيار مرتبط بهذه المساحة."); return
-    a, b = st.columns(2); sd = a.date_input("من", value=today_d() - timedelta(days=6), key=f"ws_{rid}"); ed = b.date_input("إلى", value=today_d(), key=f"we_{rid}")
-    if ed < sd: st.error("تاريخ النهاية يجب أن يكون بعد البداية."); return
-    s_, e_ = sd.isoformat(), (ed + timedelta(days=1)).isoformat()
-    delivered = df("SELECT * FROM orders WHERE rider_id=? AND status='تم التسليم' AND delivered_at>=? AND delivered_at<?", (rid, s_ + " 00:00:00", e_ + " 00:00:00"))
-    settled = df("SELECT DISTINCT si.order_id FROM settlement_items si JOIN settlements s ON s.id=si.settlement_id WHERE s.kind='طيار_كاش' AND COALESCE(s.voided,0)=0 AND si.order_id IN (SELECT id FROM orders WHERE rider_id=? AND status='تم التسليم' AND delivered_at>=? AND delivered_at<?)", (rid, s_ + " 00:00:00", e_ + " 00:00:00"))
-    sids = set(settled["order_id"].tolist()) if not settled.empty else set()
-    earned = float(delivered["rider_commission"].sum()) if not delivered.empty else 0.0
-    paid_c = float(delivered[delivered["id"].isin(sids)]["rider_commission"].sum()) if not delivered.empty else 0.0
-    os_ = rider_unsettled_orders(rid, s_, e_)
-    cash_open = float(os_["remaining_cash"].sum()) if not os_.empty else 0.0
-    net = round(cash_open - (float(os_["rider_commission"].sum()) if not os_.empty else 0) - (float(os_["reward"].sum()) if not os_.empty else 0) + (float(os_["discount"].sum()) if not os_.empty else 0), 2)
-    metric_grid([("طلبات مسلّمة", len(delivered), f"{PAY_MODES.get(r['pay_mode'], '')}", "info"), ("إجمالي العمولة", f"{earned:,.2f} ج", "المكتسبة", "good"), ("عمولة مُسوّاة", f"{paid_c:,.2f} ج", "ضمن تصفية الكاش", "info"), ("عمولة متبقية", f"{earned - paid_c:,.2f} ج", "تدخل في المستحقات", "warn"), ("كاش معك", f"{cash_open:,.2f} ج", "لم يُورَّد", "danger" if cash_open > 0 else "good"), ("صافي التوريد", f"{net:,.2f} ج", "توريد/صرف الآن", "good")])
-    if os_.empty: st.success("✅ لا توجد طلبات كاش غير مصفاة في الفترة.")
-    else: st.dataframe(os_[["order_no", "restaurant", "branch", "delivered_at", "rider_commission", "reward", "discount", "remaining_cash"]].rename(columns={"order_no": "الطلب", "restaurant": "المطعم", "branch": "الفرع", "delivered_at": "التسليم", "rider_commission": "العمولة", "reward": "المكافأة", "discount": "الخصم", "remaining_cash": "الكاش المتبقي"}), use_container_width=True, hide_index=True)
-    if owner and not os_.empty and st.button("💰 تنفيذ تصفية الطيار الآن", type="primary", use_container_width=True):
-        try: sid, due, n = create_rider_settlement(rid, s_, e_, user); st.success(f"تمت التصفية • {n} طلب • صافي التوريد {due:,.2f} ج"); st.rerun()
-        except Exception as ex: st.error(str(ex))
 
 
 # =========================================================
