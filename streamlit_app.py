@@ -264,13 +264,24 @@ def verify_pin(pin, stored):
 
 
 # ---------- جلسات الجهاز (تسجيل دخول محفوظ) ----------
-def create_session(user_id, days=90):
+def create_session(user_id, days=365):
     token = secrets.token_urlsafe(32)
     h = hashlib.sha256(token.encode()).hexdigest()
     with get_conn() as c:
         c.execute("INSERT INTO sessions(token_hash,user_id,created_at,expires_at) VALUES (?,?,?,?)",
                   (h, user_id, now_iso(), (now_dt() + timedelta(days=days)).strftime("%Y-%m-%d %H:%M:%S")))
     return token
+
+
+def touch_session(token, days=365):
+    """يجدد جلسة الجهاز طالما أن المستخدم يعمل على التطبيق."""
+    if not token:
+        return False
+    h = hashlib.sha256(str(token).encode()).hexdigest()
+    new_exp = (now_dt() + timedelta(days=days)).strftime("%Y-%m-%d %H:%M:%S")
+    with get_conn() as c:
+        cur = c.execute("UPDATE sessions SET expires_at=? WHERE token_hash=? AND expires_at>?", (new_exp, h, now_iso()))
+        return cur.rowcount == 1
 
 
 def user_from_token(token):
@@ -1126,12 +1137,11 @@ try:
         searchBtn.onclick=doSearch;searchEl.onkeydown=e=>{if(e.key==='Enter')doSearch()};
         micBtn.onclick=()=>{const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){showStatus('البحث الصوتي غير مدعوم');return}const sr=new SR();sr.lang='ar-EG';sr.interimResults=false;sr.onstart=()=>showStatus('تحدث الآن…');sr.onresult=e=>{searchEl.value=e.results[0][0].transcript;doSearch()};sr.onerror=()=>showStatus('تعذر قراءة الصوت');sr.start()};
 
-        // ---------- GPS دقيق: أعلى دقة + رفض القراءات الضعيفة + تنعيم + كشف القفزات ----------
-        const gs=mapEl.__gps||(mapEl.__gps={sm:null,n:0,lastRaw:null,lastSent:0,lastSentPos:null});
-        const geolocate=()=>{
-          if(!navigator.geolocation){setBadge('🟠 GPS غير متاح','warn');return}
-          gpsBtn.classList.remove('warn');gpsBtn.textContent='⏳ تحديد الموقع…';setBadge('⏳ جاري الحصول على GPS');
-          const push=pos=>{
+        // ---------- GPS مستمر: watcher واحد للجهاز كله + إعادة ربطه بكل إعادة رسم ----------
+        // لا نوقف watchPosition عند إعادة رسم Streamlit، بل نعيد توجيه الأحداث للمكوّن الحالي.
+        const gs=window.__owGPS||(window.__owGPS={sm:null,n:0,lastRaw:null,lastSent:0,lastSentPos:null,watchId:null,onPos:null,onFail:null,fire:null,mapEl:null});
+        gs.mapEl=mapEl;
+        const push=pos=>{
             const c=pos.coords,ts=Date.now();
             let lat=c.latitude,lng=c.longitude;const acc=c.accuracy==null?999:c.accuracy;gs.n++;
             if(acc>80&&gs.sm&&gs.n>3)return;                       // قراءة ضعيفة بعد وجود قراءة جيدة
@@ -1153,13 +1163,46 @@ try:
             if(cfg.center_on_gps&&!mapEl.__firstGpsCenter){map.setView([lat,lng],16);mapEl.__firstGpsCenter=true}
             const movedSent=gs.lastSentPos?distanceM(gs.lastSentPos,[lat,lng]):999999;
             if(ts-gs.lastSent>=5000||movedSent>=12){gs.lastSent=ts;gs.lastSentPos=[lat,lng];fire('gps',{lat:Number(lat.toFixed(6)),lng:Number(lng.toFixed(6)),accuracy:accR,heading,speed,ts})}
-          };
-          const fail=e=>{const msg=e&&e.code===1?'تم رفض إذن الموقع':e&&e.code===2?'الموقع غير متاح':e&&e.code===3?'انتهت مهلة GPS':'تعذر تحديد الموقع';gpsBtn.classList.remove('on');gpsBtn.classList.add('warn');gpsBtn.textContent='📍 السماح بالموقع';setBadge('🟠 '+msg,'warn');fire('gps_status',{code:(e&&e.code)||0,message:msg})};
-          const opts={enableHighAccuracy:true,maximumAge:0,timeout:20000};
-          navigator.geolocation.getCurrentPosition(push,fail,opts);
-          if(!mapEl.__watch){mapEl.__watch=navigator.geolocation.watchPosition(push,fail,opts)}
         };
-        if(cfg.geolocation){gpsBtn.style.display='block';gpsBtn.onclick=geolocate;if(cfg.auto_request_gps&&!mapEl.__autoRequested){mapEl.__autoRequested=true;setTimeout(geolocate,400)}}else{gpsBtn.style.display='none'}
+        gs.onPos=push;
+        gs.fire=fire;
+        gs.onFail=e=>{const msg=e&&e.code===1?'تم رفض إذن الموقع':e&&e.code===2?'الموقع غير متاح':e&&e.code===3?'انتهت مهلة GPS':'تعذر تحديد الموقع';gpsBtn.classList.remove('on');gpsBtn.classList.add('warn');gpsBtn.textContent='📍 السماح بالموقع';setBadge('🟠 '+msg,'warn');fire('gps_status',{code:(e&&e.code)||0,message:msg})};
+        const opts={enableHighAccuracy:true,maximumAge:0,timeout:20000};
+        const ensureGps=()=>{
+          if(!navigator.geolocation){setBadge('🟠 GPS غير متاح','warn');return}
+          gpsBtn.classList.remove('warn');gpsBtn.textContent='⏳ تحديد الموقع…';setBadge('⏳ جاري الحصول على GPS');
+          navigator.geolocation.getCurrentPosition(pos=>gs.onPos&&gs.onPos(pos),e=>gs.onFail&&gs.onFail(e),opts);
+          if(gs.watchId==null){
+            gs.watchId=navigator.geolocation.watchPosition(
+              pos=>gs.onPos&&gs.onPos(pos),
+              e=>gs.onFail&&gs.onFail(e),
+              opts
+            );
+          }
+          // إبقاء الشاشة مستيقظة أثناء الوردية قدر الإمكان (يدعم المتصفحات الحديثة).
+          try{
+            const lock=()=>{
+              if(!('wakeLock' in navigator))return;
+              navigator.wakeLock.request('screen').then(l=>{window.__owWakeLock=l;l.addEventListener('release',()=>{window.__owWakeLock=null})}).catch(()=>{});
+            };
+            if(!window.__owWakeLock)lock();
+            if(!window.__owWakeLockBound){
+              window.__owWakeLockBound=true;
+              document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&!window.__owWakeLock)lock()},{passive:true});
+            }
+          }catch(e){}
+        };
+        if(cfg.geolocation){
+          gpsBtn.style.display='block';
+          gpsBtn.onclick=ensureGps;
+          if(!mapEl.__visibilityGpsBound){
+            mapEl.__visibilityGpsBound=true;
+            document.addEventListener('visibilitychange',()=>{
+              if(document.visibilityState==='visible' && gs.watchId==null)ensureGps();
+            },{passive:true});
+          }
+          if(cfg.auto_request_gps&&!mapEl.__autoRequested){mapEl.__autoRequested=true;setTimeout(ensureGps,400)}
+        }else{gpsBtn.style.display='none'}
         root.querySelector('#owfit').onclick=()=>{mapEl.__userMoved=false;if(bounds.length)map.fitBounds(bounds,{padding:[42,42],maxZoom:15});else map.setView(cfg.center||[31.2001,29.9187],Number(cfg.zoom||12))};
         root.querySelector('#owfull').onclick=()=>{if(!document.fullscreenElement&&root.requestFullscreen)root.requestFullscreen().catch(()=>{});else if(document.exitFullscreen)document.exitFullscreen()};
         root.querySelector('#owshare').onclick=()=>{const s=cfg.selected||(cfg.route&&{lat:cfg.route.to[0],lng:cfg.route.to[1]});if(!s||s.lat==null){showStatus('حدد وجهة أولاً');return}const url=`https://www.google.com/maps/dir/?api=1&destination=${s.lat},${s.lng}`;if(navigator.share)navigator.share({title:'ONWAY',text:'وجهة ONWAY',url}).catch(()=>{});else if(navigator.clipboard)navigator.clipboard.writeText(url).then(()=>showStatus('تم نسخ رابط الملاحة'))};
@@ -1208,17 +1251,22 @@ try:
 
     DEVICE_JS = r"""
     export default function(component){
-      const d=component.data||{};
+      const {data,setTriggerValue}=component;
+      const d=data||{};
       try{
         if(d.action==='set'&&d.token){
-          document.cookie='onway_token='+d.token+'; max-age=7776000; path=/; SameSite=Lax'+(location.protocol==='https:'?'; Secure':'');
+          document.cookie='onway_token='+d.token+'; max-age=31536000; path=/; SameSite=Lax'+(location.protocol==='https:'?'; Secure':'');
         }
         if(d.action==='clear'){document.cookie='onway_token=; max-age=0; path=/; SameSite=Lax'}
+        // نبضة خفيفة للسيرفر كل 20 ثانية لتجديد جلسة الجهاز ومنع اعتبار الاتصال خاملاً.
+        if(!window.__owSessionHeartbeat){
+          window.__owSessionHeartbeat=setInterval(()=>{try{setTriggerValue('heartbeat',JSON.stringify({ts:Date.now()}))}catch(e){}},20000);
+        }
       }catch(e){}
       return ()=>{};
     }
     """
-    DEVICE_COMPONENT = _component("onway_device_v1", html="<span id='owdevice' aria-hidden='true'></span>", css="#owdevice{display:none!important}", js=DEVICE_JS, isolate_styles=False)
+    DEVICE_COMPONENT = _component("onway_device_v2", html="<span id='owdevice' aria-hidden='true'></span>", css="#owdevice{display:none!important}", js=DEVICE_JS, isolate_styles=False)
 
     # غلاف التطبيق: يجعل الصفحة تتصرف كتطبيق موبايل (أيقونة، شاشة كاملة، زر تثبيت)
     SHELL_JS = r"""
@@ -1392,7 +1440,7 @@ def create_owner():
 def login():
     if df("SELECT id FROM users WHERE active=1").empty:
         create_owner(); return
-    header("تسجيل الدخول", "ادخل مرة واحدة وسيبقى الحساب محفوظاً على هذا الجهاز حتى تسجل الخروج.")
+    header("تسجيل الدخول", "ادخل مرة واحدة وسيبقى الحساب محفوظاً على هذا الجهاز، والجلسة تتجدد تلقائياً أثناء العمل.")
     with st.form("login"):
         e = st.text_input("البريد الإلكتروني").strip().lower(); p = st.text_input("PIN", type="password", max_chars=8)
         remember = st.checkbox("تذكرني على هذا الجهاز", value=True)
@@ -2377,7 +2425,7 @@ def render_rider(user):
             with st.expander(f"📋 طلبات قادمة ({len(my) - 1})"):
                 for _, o in my.iloc[1:].iterrows(): st.markdown(f"**{esc(o['order_no'])}** — {esc(o['restaurant'])} ← {esc(o['delivery_address'])} — {badge(o['status'])}", unsafe_allow_html=True)
     gps_state = st.session_state.get("gps_status") or {}
-    hint = "الإذن مرفوض: من إعدادات المتصفح > أذونات الموقع > السماح، ثم أعد تحميل الصفحة." if gps_state.get("code") == 1 else "اترك هذه الصفحة مفتوحة أثناء العمل ليصل موقعك للإدارة. اضغط «تشغيل موقعي» في الخريطة أول مرة."
+    hint = "الإذن مرفوض: من إعدادات المتصفح > أذونات الموقع > السماح، ثم أعد تحميل الصفحة." if gps_state.get("code") == 1 else "اترك التطبيق مفتوحاً أثناء الوردية واضغط «تشغيل موقعي» أول مرة. التطبيق يعيد ربط GPS تلقائياً ويحاول إبقاء الشاشة مستيقظة."
     st.markdown(f'<div class="gps-panel"><div class="gps-title">📍 تتبع الموقع</div><div class="gps-sub">{hint}</div></div>', unsafe_allow_html=True)
     live_map_fragment(user, route=route)
     att = one("SELECT * FROM attendance WHERE rider_id=? AND work_date=?", (r["id"], today_str()))
@@ -2838,7 +2886,12 @@ def main():
         if "user" not in st.session_state:
             if st.session_state.get("_clear_cookie"): sync_device_cookie("clear")
             login(); return
-    if st.session_state.get("_token") and DEVICE_COMPONENT is not None: sync_device_cookie("set", st.session_state["_token"])
+    if st.session_state.get("_token") and DEVICE_COMPONENT is not None:
+        dev = DEVICE_COMPONENT(key="device_guard", data={"action": "set", "token": st.session_state["_token"]})
+        hb = _payload(dev, "heartbeat") if dev else None
+        if hb:
+            # أي نبضة ناجحة تجدد انتهاء الجلسة سنة إضافية.
+            touch_session(st.session_state["_token"], days=365)
     user = effective_user()
     menu_bar(user)
     live_notifications_fragment(user)
